@@ -87,7 +87,7 @@ export function PostReplayForm({
         <textarea
           value={question}
           onChange={(e) => setQuestion(e.target.value)}
-          placeholder="面试中被问到的具体问题"
+          placeholder="尽量还原导师原话，例如“你在这个项目中的具体贡献是什么？”"
           rows={2}
           className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
@@ -125,7 +125,10 @@ export function PostReplayForm({
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-800">回答版本（至少填写 2 个）</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-gray-800">回答版本（至少填写 2 个）</h2>
+            <p className="mt-0.5 text-xs text-gray-400">建议至少填写“真实回答”和“事后修改版”。如有同学建议或 AI 改写，也可以作为新版本加入。</p>
+          </div>
           <div className="flex items-center gap-2">
             <span className="text-xs text-gray-400">
               {validCount}/{versions.length} 个已填写

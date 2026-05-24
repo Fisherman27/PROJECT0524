@@ -8,9 +8,11 @@ interface ModeCardProps {
   description: string;
   href: string;
   labels: string[];
+  fitFor?: string;
+  needs?: string;
 }
 
-export function ModeCard({ title, subtitle, description, href, labels }: ModeCardProps) {
+export function ModeCard({ title, subtitle, description, href, labels, fitFor, needs }: ModeCardProps) {
   return (
     <Link
       href={href}
@@ -19,6 +21,16 @@ export function ModeCard({ title, subtitle, description, href, labels }: ModeCar
       <h2 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600">{title}</h2>
       <p className="mt-1 text-xs font-medium text-blue-600">{subtitle}</p>
       <p className="mt-3 text-sm leading-relaxed text-gray-500">{description}</p>
+      {fitFor && (
+        <p className="mt-3 text-xs text-gray-500">
+          <span className="font-medium text-gray-600">适合：</span>{fitFor}
+        </p>
+      )}
+      {needs && (
+        <p className="mt-1 text-xs text-gray-500">
+          <span className="font-medium text-gray-600">你需要：</span>{needs}
+        </p>
+      )}
       <div className="mt-4 flex flex-wrap gap-1.5">
         {labels.map((label) => (
           <span

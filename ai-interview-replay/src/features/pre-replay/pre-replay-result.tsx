@@ -14,6 +14,7 @@ import { EvidenceClaimList } from "@/components/evidence-claim-list";
 import { ProfessorPressureTestList } from "@/components/professor-pressure-test-list";
 import { SafeAnswerPanel } from "@/components/safe-answer-panel";
 import { AnswerVerificationPanel } from "@/components/answer-verification-panel";
+import { ReportReadingGuide } from "@/components/report-reading-guide";
 import { formatPreMarkdown } from "@/lib/markdown-export";
 import { safeFilename } from "@/lib/filename";
 
@@ -102,6 +103,9 @@ export function PreReplayResult({ report, copyText }: PreReplayResultProps) {  r
           <MarkdownExportButton markdown={formatPreMarkdown(report)} filename={safeFilename("interview-replay-pre", ".md")} />
         </div>
       </div>
+
+      {/* Reading guide */}
+      <ReportReadingGuide mode="pre" />
 
       {/* Always visible: Quality Summary */}
       <QualitySummaryCard summary={report.qualitySummary} maturity={report.answerMaturity} />

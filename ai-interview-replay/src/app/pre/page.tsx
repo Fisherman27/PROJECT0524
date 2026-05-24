@@ -6,6 +6,7 @@ import { PreReplayResult } from "@/features/pre-replay/pre-replay-result";
 import { LoadingState } from "@/components/loading-state";
 import { ErrorPanel } from "@/components/error-panel";
 import { AgentPipeline } from "@/components/agent-pipeline";
+import { StepGuide } from "@/components/step-guide";
 import { generatePreReport } from "@/features/pre-replay/pre-replay-client";
 import { AgentTraceItem, PreReplayRequest, PreReplayResponse, QuestionPreAnalysis } from "@/types/replay";
 import { useInterviewContext } from "@/lib/interview-context";
@@ -143,7 +144,16 @@ export default function PrePage() {
       {loading && (
         <div className="flex gap-6">
           <div className="flex-1">
-            <LoadingState />
+            <LoadingState
+              text="正在生成面试前复盘..."
+              steps={[
+                "复用材料证据库",
+                "匹配回答中的材料证据",
+                "分析临场损失",
+                "模拟导师追问风险",
+                "生成最佳安全回答",
+              ]}
+            />
             {error && <ErrorPanel message={error} onRetry={() => setError(null)} />}
           </div>
           <div className="w-56 flex-shrink-0">
@@ -192,6 +202,22 @@ export default function PrePage() {
                 <p className="mt-1 text-sm text-gray-500">
                   限时临场作答 + 冷静重答 — 发现紧张时你丢掉了哪些关键信息。
                 </p>
+              </div>
+            )}
+            <StepGuide
+              steps={[
+                { title: "确认问题", description: "输入或生成一道练习题" },
+                { title: "临场作答", description: "限时写下真实表达" },
+                { title: "冷静重答", description: "补充遗漏证据和逻辑" },
+                { title: "生成复盘", description: "查看损失、风险和救场模板" },
+              ]}
+            />
+            {!materialAnalysis && (
+              <div className="rounded-lg border border-amber-100 bg-amber-50 p-3 text-xs text-amber-700">
+                <span className="mr-1 select-none">&#9432;</span>
+                建议先
+                <Link href="/" className="mx-0.5 font-medium text-amber-800 underline underline-offset-2">回首页分析材料</Link>
+                ，这样系统能提前生成证据库；也可以继续填写，最终评审时会自动补跑。
               </div>
             )}
             <PreReplayForm

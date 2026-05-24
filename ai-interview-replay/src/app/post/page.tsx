@@ -6,6 +6,7 @@ import { PostReplayResult } from "@/features/post-replay/post-replay-result";
 import { LoadingState } from "@/components/loading-state";
 import { ErrorPanel } from "@/components/error-panel";
 import { AgentPipeline } from "@/components/agent-pipeline";
+import { StepGuide } from "@/components/step-guide";
 import { generatePostReport } from "@/features/post-replay/post-replay-client";
 import { AgentTraceItem, PostReplayRequest, PostReplayResponse, QuestionPreAnalysis } from "@/types/replay";
 import { useInterviewContext } from "@/lib/interview-context";
@@ -141,7 +142,16 @@ export default function PostPage() {
       {loading && (
         <div className="flex gap-6">
           <div className="flex-1">
-            <LoadingState />
+            <LoadingState
+              text="正在生成面试后复盘..."
+              steps={[
+                "复用材料证据库",
+                "比较多个回答版本",
+                "识别导师追问风险",
+                "生成最佳安全回答",
+                "提炼可迁移回答公式",
+              ]}
+            />
             {error && <ErrorPanel message={error} onRetry={() => setError(null)} />}
           </div>
           <div className="w-56 flex-shrink-0">
@@ -190,6 +200,22 @@ export default function PostPage() {
                 <p className="mt-1 text-sm text-gray-500">
                   输入真实面试问题和多个回答版本 — 从导师视角诊断哪种说法更稳。
                 </p>
+              </div>
+            )}
+            <StepGuide
+              steps={[
+                { title: "填写真实问题", description: "尽量还原导师原话" },
+                { title: "添加回答版本", description: "至少两个版本用于比较" },
+                { title: "比较与诊断", description: "识别更稳表达和追问风险" },
+                { title: "提炼公式", description: "沉淀下一次可复用说法" },
+              ]}
+            />
+            {!materialAnalysis && (
+              <div className="rounded-lg border border-amber-100 bg-amber-50 p-3 text-xs text-amber-700">
+                <span className="mr-1 select-none">&#9432;</span>
+                建议先
+                <Link href="/" className="mx-0.5 font-medium text-amber-800 underline underline-offset-2">回首页分析材料</Link>
+                。材料证据库越完整，多版本比较越能判断哪些表达有支撑。
               </div>
             )}
             <PostReplayForm

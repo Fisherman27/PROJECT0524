@@ -5,7 +5,10 @@ import { ModeCard } from "@/components/mode-card";
 import { FormField } from "@/components/form-field";
 import { MaterialFileManager } from "@/components/material-file-manager";
 import { AgentPipeline } from "@/components/agent-pipeline";
+import { UseGuidePanel } from "@/components/use-guide-panel";
+import { MaterialReadinessPanel } from "@/components/material-readiness-panel";
 import { useInterviewContext } from "@/lib/interview-context";
+import { demoInterviewContext } from "@/lib/demo-data";
 import { MaterialPreAnalysis, AgentTraceItem } from "@/types/replay";
 
 export default function Home() {
@@ -78,6 +81,11 @@ export default function Home() {
     }
   };
 
+  const handleLoadDemo = () => {
+    update(demoInterviewContext);
+    setMaterialError("");
+  };
+
   const handleClear = () => {
     clear();
     setMaterialError("");
@@ -98,6 +106,9 @@ export default function Home() {
           把一次回答沉淀成下一次可用的表达策略。
         </p>
       </div>
+
+      {/* Usage guide */}
+      <UseGuidePanel />
 
       {/* Interview Background Panel */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
@@ -157,6 +168,11 @@ export default function Home() {
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
 
+          <MaterialReadinessPanel
+            materials={fullMaterials}
+            targetDirection={data.targetDirection}
+          />
+
           <div className="mt-3">
             <p className="mb-2 text-xs font-medium text-gray-500">上传材料文件</p>
             <MaterialFileManager
@@ -168,7 +184,7 @@ export default function Home() {
           </div>
 
           {/* Analyze Material Button */}
-          <div className="mt-4 flex items-center gap-3">
+          <div className="mt-4 flex flex-wrap items-center gap-3">
             <button
               type="button"
               onClick={handleAnalyzeMaterials}
@@ -182,6 +198,13 @@ export default function Home() {
                 </svg>
               )}
               {analyzingLabel}
+            </button>
+            <button
+              type="button"
+              onClick={handleLoadDemo}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+            >
+              载入示例材料
             </button>
             {analysisDone && (
               <span className="text-xs text-green-600">
@@ -208,6 +231,8 @@ export default function Home() {
             description="限时回答一道保研问题，比较紧张时和冷静时的回答差距，发现关键信息遗漏。"
             href="/pre"
             labels={["临场差距", "证据遗漏", "救场模板"]}
+            fitFor="正式面试前，想练真实临场表达"
+            needs="一道问题 + 临场回答 + 冷静回答"
           />
           <ModeCard
             title="面试后复盘"
@@ -215,6 +240,8 @@ export default function Home() {
             description="输入真实面试问题和多个回答，从导师视角诊断哪种说法更稳。"
             href="/post"
             labels={["版本对比", "逐句诊断", "回答公式"]}
+            fitFor="真实面试后，想比较多个回答版本"
+            needs="真实问题 + 至少两个回答版本"
           />
         </div>
       </div>

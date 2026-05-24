@@ -133,7 +133,7 @@ export function PreReplayForm({ onSubmit, loading, bg, onQuestionReady, planning
             </div>
             {questionReason && <p className="mb-2 text-xs text-gray-400">建议原因：{questionReason}</p>}
             {questionError && <p className="mb-2 text-xs text-red-500">生成失败：{questionError}</p>}
-            <FormField label="" name="question" value={question} onChange={setQuestion} placeholder="输入面试问题，或点击上方按钮根据你的背景材料生成" type="textarea" rows={2} required />
+            <FormField label="" name="question" value={question} onChange={setQuestion} placeholder="尽量写完整问题，例如「请介绍一个你做过的科研或项目经历」" type="textarea" rows={2} required />
 
             {/* Question analysis status */}
             {question.trim() && onQuestionReady && (
@@ -209,6 +209,7 @@ export function PreReplayForm({ onSubmit, loading, bg, onQuestionReady, planning
             <div className="mb-3 rounded-lg bg-gray-50 p-3">
               <p className="text-sm font-medium text-gray-700">{question}</p>
             </div>
+            <p className="mb-2 text-xs text-gray-400">请保留真实临场表达，不要事后润色，这样系统才能诊断表达损失。</p>
             <textarea value={liveAnswer} onChange={(e) => setLiveAnswer(e.target.value)} placeholder="在倒计时结束前写下你的临场回答..." rows={5} className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500" />
           </div>
         </div>
@@ -231,7 +232,7 @@ export function PreReplayForm({ onSubmit, loading, bg, onQuestionReady, planning
 
           <div className="rounded-xl border border-gray-200 bg-white p-5">
             <h2 className="mb-4 text-lg font-semibold text-blue-700">冷静回答</h2>
-            <p className="mb-3 text-xs text-gray-400">冷静思考后重新组织回答。试试补充临场时遗漏的关键内容。</p>
+            <p className="mb-3 text-xs text-gray-400">补充刚才没说出的项目证据、个人贡献、结果和未来计划。</p>
             <FormField label="" name="calmAnswer" value={calmAnswer} onChange={setCalmAnswer} placeholder="写出你冷静后想到的回答..." type="textarea" rows={5} required />
           </div>
 
