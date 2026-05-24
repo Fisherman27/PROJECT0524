@@ -69,9 +69,13 @@ export type ReplayCard = {
 
 export type AgentTraceItem = {
   agentName: string;
+  agentVersion?: string;
+  stage?: "material" | "question" | "diagnosis" | "synthesis" | "training" | "compose";
   summary: string;
-  status: "success" | "failed";
+  status: "success" | "failed" | "skipped";
   durationMs?: number;
+  usedCachedInput?: boolean;
+  errorCode?: string;
 };
 
 // ---- Extended Report types ----
@@ -124,6 +128,34 @@ export type PostReplayReport = {
 
 // ---- Request types ----
 
+// ---- P1 Pre-analysis types ----
+
+export type ExpectedEvidenceItem = {
+  title: string;
+  evidenceCardTitle: string;
+  reason: string;
+  priority: "high" | "medium" | "low";
+  suggestedUse: string;
+};
+
+export type MaterialPreAnalysis = {
+  evidenceCards: EvidenceCard[];
+  summary: string;
+  inputFingerprint: string;
+  agentTrace: AgentTraceItem[];
+};
+
+export type QuestionPreAnalysis = {
+  questionIntent: string;
+  evaluationFocus: string[];
+  idealAnswerLayers: string[];
+  commonPitfalls: string[];
+  expectedEvidence: ExpectedEvidenceItem[];
+  summary: string;
+  inputFingerprint: string;
+  agentTrace: AgentTraceItem[];
+};
+
 export type PreReplayRequest = {
   interviewType: string;
   targetDirection: string;
@@ -132,6 +164,8 @@ export type PreReplayRequest = {
   question: string;
   liveAnswer: string;
   calmAnswer: string;
+  materialAnalysis?: MaterialPreAnalysis;
+  questionPlan?: QuestionPreAnalysis;
 };
 
 export type PostReplayRequest = {
@@ -144,6 +178,8 @@ export type PostReplayRequest = {
     source: string;
     content: string;
   }>;
+  materialAnalysis?: MaterialPreAnalysis;
+  questionPlan?: QuestionPreAnalysis;
 };
 
 export type QuestionsRequest = {

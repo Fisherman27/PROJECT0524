@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { FormField } from "@/components/form-field";
 import { TimerControl } from "@/components/timer-control";
 import { generateQuestion } from "./pre-replay-client";
@@ -18,15 +18,34 @@ interface PreReplayFormProps {
   onSubmit: (data: PreReplayRequest) => void;
   loading: boolean;
   bg: BackgroundFromHome;
+  onQuestionReady?: (question: string) => void;
+  planningQuestion?: boolean;
+  planError?: string;
 }
 
-export function PreReplayForm({ onSubmit, loading, bg }: PreReplayFormProps) {
+export function PreReplayForm({ onSubmit, loading, bg, onQuestionReady, planningQuestion, planError }: PreReplayFormProps) {
   const [question, setQuestion] = useState("");
   const [liveAnswer, setLiveAnswer] = useState("");
   const [calmAnswer, setCalmAnswer] = useState("");
   const [generatingQuestion, setGeneratingQuestion] = useState(false);
   const [questionReason, setQuestionReason] = useState("");
   const [questionError, setQuestionError] = useState("");
+  const questionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Trigger question planning after AI generation or manual input debounced
+  useEffect(() => {
+    if (!onQuestionReady) return;
+    const q = question.trim();
+    if (!q) return;
+
+    // Debounce manual typing
+    if (questionTimer.current) clearTimeout(questionTimer.current);
+    questionTimer.current = setTimeout(() => onQuestionReady(q), 800);
+
+    return () => {
+      if (questionTimer.current) clearTimeout(questionTimer.current);
+    };
+  }, [question, onQuestionReady]);
 
   const {
     stage,
@@ -60,12 +79,14 @@ export function PreReplayForm({ onSubmit, loading, bg }: PreReplayFormProps) {
       });
       setQuestion(result.question);
       setQuestionReason(result.reason);
+      // Immediately trigger question planning (no debounce for AI generated)
+      if (onQuestionReady) onQuestionReady(result.question);
     } catch (e) {
       setQuestionError(e instanceof Error ? e.message : "生成问题失败");
     } finally {
       setGeneratingQuestion(false);
     }
-  }, [bg.interviewType, bg.targetDirection, bg.backgroundMaterials]);
+  }, [bg.interviewType, bg.targetDirection, bg.backgroundMaterials, onQuestionReady]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,6 +134,15 @@ export function PreReplayForm({ onSubmit, loading, bg }: PreReplayFormProps) {
             {questionReason && <p className="mb-2 text-xs text-gray-400">建议原因：{questionReason}</p>}
             {questionError && <p className="mb-2 text-xs text-red-500">生成失败：{questionError}</p>}
             <FormField label="" name="question" value={question} onChange={setQuestion} placeholder="输入面试问题，或点击上方按钮根据你的背景材料生成" type="textarea" rows={2} required />
+
+            {/* Question analysis status */}
+            {question.trim() && onQuestionReady && (
+              <p className="mt-2 text-xs text-gray-400">
+                {planningQuestion ? "问题分析中..."
+                  : planError ? `问题分析：${planError}（最终复盘时会自动补充）`
+                  : "问题分析已完成，可开始临场作答"}
+              </p>
+            )}
           </div>
 
           {question.trim() && (

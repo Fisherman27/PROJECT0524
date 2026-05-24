@@ -1,4 +1,4 @@
-import { PreReplayRequest, PostReplayRequest, QuestionsRequest } from "@/types/replay";
+import { PreReplayRequest, PostReplayRequest, QuestionsRequest, MaterialPreAnalysis, QuestionPreAnalysis } from "@/types/replay";
 
 const MAX_TEXT_LENGTH = 5000;
 
@@ -23,6 +23,8 @@ export function validatePreRequest(body: unknown): PreReplayRequest {
     question: (b.question as string).slice(0, MAX_TEXT_LENGTH),
     liveAnswer: (b.liveAnswer as string).slice(0, MAX_TEXT_LENGTH),
     calmAnswer: (b.calmAnswer as string).slice(0, MAX_TEXT_LENGTH),
+    materialAnalysis: b.materialAnalysis as MaterialPreAnalysis | undefined,
+    questionPlan: b.questionPlan as QuestionPreAnalysis | undefined,
   };
 }
 
@@ -63,6 +65,8 @@ export function validatePostRequest(body: unknown): PostReplayRequest {
       source: typeof rec.source === "string" ? (rec.source as string).slice(0, 100) : "未知来源",
       content: (rec.content as string).slice(0, MAX_TEXT_LENGTH),
     })),
+    materialAnalysis: b.materialAnalysis as MaterialPreAnalysis | undefined,
+    questionPlan: b.questionPlan as QuestionPreAnalysis | undefined,
   };
 }
 

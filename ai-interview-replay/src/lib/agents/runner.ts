@@ -1,6 +1,13 @@
-import { PreReplayRequest, PostReplayRequest, PreReplayReport, PostReplayReport, AgentTraceItem } from "@/types/replay";
+import {
+  PreReplayRequest, PostReplayRequest,
+  PreReplayReport, PostReplayReport,
+  AgentTraceItem,
+  MaterialPreAnalysis, QuestionPreAnalysis,
+  EvidenceCard, ExpectedEvidenceItem,
+} from "@/types/replay";
 import { runMaterialAgent } from "./material-agent";
 import { runIntentAgent } from "./intent-agent";
+import { runEvidencePlannerAgent } from "./evidence-planner-agent";
 import { runEvidenceAgent } from "./evidence-agent";
 import { runProfessorAgent } from "./professor-agent";
 import { runGapAgent } from "./gap-agent";
@@ -8,97 +15,296 @@ import { runDiffAgent } from "./diff-agent";
 import { runSynthesizerAgent } from "./synthesizer-agent";
 import { runTrainingAgent } from "./training-agent";
 import { composePreReport, composePostReport } from "./composer";
+import { makeMaterialFingerprint, makeQuestionFingerprint } from "./fingerprint";
+import { MaterialAgentOutput, IntentAgentOutput, ProfessorAgentOutput, GapAgentOutput, DiffAgentOutput } from "./types";
 
-function trace(agentName: string, summary: string, startMs: number): AgentTraceItem {
+function trace(agentName: string, summary: string, startMs: number, overrides?: Partial<AgentTraceItem>): AgentTraceItem {
   return {
     agentName,
+    agentVersion: "v1",
     summary: summary.slice(0, 100),
     status: "success",
     durationMs: Date.now() - startMs,
+    ...overrides,
   };
 }
 
-export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreReplayReport> {
-  const traces: AgentTraceItem[] = [];
+// ---- Pre-analysis resolver ----
 
-  // 1. Material Analyst
-  const t0 = Date.now();
+async function resolveMaterialAnalysis(req: {
+  backgroundMaterials: string;
+  targetDirection?: string;
+  targetSchool?: string;
+  materialAnalysis?: MaterialPreAnalysis;
+}): Promise<{ material: MaterialAgentOutput; cached: boolean }> {
+  const currentFingerprint = makeMaterialFingerprint(
+    req.backgroundMaterials,
+    req.targetDirection,
+    req.targetSchool,
+  );
+
+  if (
+    req.materialAnalysis?.inputFingerprint === currentFingerprint &&
+    req.materialAnalysis.evidenceCards?.length > 0
+  ) {
+    const ma = req.materialAnalysis;
+    const validatedCards: EvidenceCard[] = ma.evidenceCards.map((c) => ({
+      title: c.title || "未命名",
+      type: c.type || "other",
+      content: c.content || "",
+      supportedQuestions: Array.isArray(c.supportedQuestions) ? c.supportedQuestions : [],
+      abilities: Array.isArray(c.abilities) ? c.abilities : [],
+      possibleFollowUps: Array.isArray(c.possibleFollowUps) ? c.possibleFollowUps : [],
+      usageRisk: typeof c.usageRisk === "string" ? c.usageRisk : "",
+      suggestedExpression: typeof c.suggestedExpression === "string" ? c.suggestedExpression : "",
+    }));
+
+    return {
+      material: {
+        evidenceCards: validatedCards,
+        summary: ma.summary || "",
+      },
+      cached: true,
+    };
+  }
+
   const material = await runMaterialAgent({
     backgroundMaterials: req.backgroundMaterials,
     targetDirection: req.targetDirection,
     targetSchool: req.targetSchool,
   });
-  traces.push(trace("材料分析器", material.summary, t0));
+  return { material, cached: false };
+}
 
-  // 2. Intent
-  const t1 = Date.now();
-  const intent = await runIntentAgent({
+async function resolveQuestionPlan(req: {
+  question: string;
+  interviewType?: string;
+  targetDirection?: string;
+  targetSchool?: string;
+  backgroundMaterials: string;
+  questionPlan?: QuestionPreAnalysis;
+  materialFingerprint?: string;
+  evidenceCards?: EvidenceCard[];
+}, traces: AgentTraceItem[]): Promise<QuestionPreAnalysis> {
+  const currentFingerprint = makeQuestionFingerprint(
+    req.question,
+    req.materialFingerprint || "",
+    req.targetDirection,
+  );
+
+  if (
+    req.questionPlan?.inputFingerprint === currentFingerprint &&
+    req.questionPlan.questionIntent
+  ) {
+    const qp = req.questionPlan;
+    traces.push({
+      agentName: "问题意图分析器+证据规划器",
+      agentVersion: "v1",
+      stage: "question",
+      summary: "复用预分析结果",
+      status: "success",
+      usedCachedInput: true,
+    });
+
+    return {
+      questionIntent: qp.questionIntent,
+      evaluationFocus: Array.isArray(qp.evaluationFocus) ? qp.evaluationFocus : [],
+      idealAnswerLayers: Array.isArray(qp.idealAnswerLayers) ? qp.idealAnswerLayers : [],
+      commonPitfalls: Array.isArray(qp.commonPitfalls) ? qp.commonPitfalls : [],
+      expectedEvidence: Array.isArray(qp.expectedEvidence)
+        ? qp.expectedEvidence.map((e) => ({
+            title: e.title || "",
+            evidenceCardTitle: e.evidenceCardTitle || "",
+            reason: e.reason || "",
+            priority: e.priority || "medium",
+            suggestedUse: e.suggestedUse || "",
+          }))
+        : [],
+      summary: qp.summary || "",
+      inputFingerprint: currentFingerprint,
+      agentTrace: [],
+    };
+  }
+
+  // Fallback: run intent
+  const t0 = Date.now();
+  let questionIntent = "";
+  let evaluationFocus: string[] = [];
+  let idealAnswerLayers: string[] = [];
+  let commonPitfalls: string[] = [];
+
+  try {
+    const intent = await runIntentAgent({
+      question: req.question,
+      interviewType: req.interviewType,
+      targetDirection: req.targetDirection,
+      targetSchool: req.targetSchool,
+    });
+    questionIntent = intent.questionIntent;
+    evaluationFocus = intent.evaluationFocus;
+    idealAnswerLayers = intent.idealAnswerLayers;
+    commonPitfalls = intent.commonPitfalls;
+    traces.push(trace("问题意图分析器", intent.summary, t0, { stage: "question" }));
+  } catch {
+    traces.push({
+      agentName: "问题意图分析器",
+      agentVersion: "v1",
+      stage: "question",
+      summary: "分析失败",
+      status: "failed",
+      errorCode: "intent_failed",
+    });
+  }
+
+  // Fallback: also run evidence planner when evidence cards are available
+  let expectedEvidence: ExpectedEvidenceItem[] = [];
+  if (questionIntent && (req.evidenceCards?.length ?? 0) > 0) {
+    try {
+      const planner = await runEvidencePlannerAgent({
+        question: req.question,
+        questionIntent,
+        evidenceCards: req.evidenceCards!,
+      });
+      expectedEvidence = planner.expectedEvidence;
+      traces.push(trace("证据规划器", planner.summary, Date.now(), { stage: "question" }));
+    } catch {
+      traces.push({
+        agentName: "证据规划器",
+        agentVersion: "v1",
+        stage: "question",
+        summary: "规划失败",
+        status: "failed",
+      });
+    }
+  }
+
+  return {
+    questionIntent,
+    evaluationFocus,
+    idealAnswerLayers,
+    commonPitfalls,
+    expectedEvidence,
+    summary: questionIntent ? "问题意图分析已完成" : "问题意图分析失败",
+    inputFingerprint: currentFingerprint,
+    agentTrace: [],
+  };
+}
+
+// ---- Main runner functions ----
+
+export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreReplayReport> {
+  const traces: AgentTraceItem[] = [];
+
+  // Phase 1: Material
+  const { material, cached: matCached } = await resolveMaterialAnalysis({
+    backgroundMaterials: req.backgroundMaterials,
+    targetDirection: req.targetDirection,
+    targetSchool: req.targetSchool,
+    materialAnalysis: req.materialAnalysis,
+  });
+  traces.push({
+    agentName: "材料分析器",
+    agentVersion: "v1",
+    stage: "material",
+    summary: matCached ? "复用预分析结果" : (material.summary?.slice(0, 100) || "完成"),
+    status: "success",
+    usedCachedInput: matCached,
+  });
+
+  // Phase 2: Question Plan
+  const mFingerprint = makeMaterialFingerprint(req.backgroundMaterials, req.targetDirection, req.targetSchool);
+  const questionPlan = await resolveQuestionPlan({
     question: req.question,
     interviewType: req.interviewType,
     targetDirection: req.targetDirection,
     targetSchool: req.targetSchool,
-  });
-  traces.push(trace("问题意图分析器", intent.summary, t1));
+    backgroundMaterials: req.backgroundMaterials,
+    questionPlan: req.questionPlan,
+    materialFingerprint: mFingerprint,
+    evidenceCards: material.evidenceCards,
+  }, traces);
 
-  // 3. Evidence Mapper
-  const t2 = Date.now();
+  // Phase 3: Evidence Mapper
+  const tEvidence = Date.now();
   const evidence = await runEvidenceAgent({
     question: req.question,
     answersText: `临场回答：\n${req.liveAnswer}\n\n冷静回答：\n${req.calmAnswer}`,
     evidenceCards: material.evidenceCards,
-    questionIntent: intent.questionIntent,
+    questionIntent: questionPlan.questionIntent,
+    expectedEvidence: questionPlan.expectedEvidence,
   });
-  traces.push(trace("材料证据匹配器", evidence.summary, t2));
+  traces.push(trace("材料证据匹配器", evidence.summary, tEvidence, { stage: "diagnosis" }));
 
-  // 4. Professor
-  const t3 = Date.now();
-  const professor = await runProfessorAgent({
-    question: req.question,
-    answersText: `临场回答：\n${req.liveAnswer}\n\n冷静回答：\n${req.calmAnswer}`,
-    evidenceCards: material.evidenceCards,
-    materialRecall: evidence.materialRecall,
-    targetDirection: req.targetDirection,
-  });
-  traces.push(trace("导师风险审查员", professor.summary, t3));
+  // Phase 4: Professor + Gap in parallel with per-agent fallback
+  const tParallel = Date.now();
+  let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], summary: "" };
+  let gap: GapAgentOutput = { liveAnswerDiagnosis: [], calmAnswerImprovements: [], liveLossAnalysis: [], summary: "" };
 
-  // 5. Gap Diagnoser
-  const t4 = Date.now();
-  const gap = await runGapAgent({
-    question: req.question,
-    liveAnswer: req.liveAnswer,
-    calmAnswer: req.calmAnswer,
-    evidenceCards: material.evidenceCards,
-    materialRecall: evidence.materialRecall,
-  });
-  traces.push(trace("临场差距诊断器", gap.summary, t4));
+  const [pResult, gResult] = await Promise.allSettled([
+    runProfessorAgent({
+      question: req.question,
+      answersText: `临场回答：\n${req.liveAnswer}\n\n冷静回答：\n${req.calmAnswer}`,
+      evidenceCards: material.evidenceCards,
+      materialRecall: evidence.materialRecall,
+      targetDirection: req.targetDirection,
+    }),
+    runGapAgent({
+      question: req.question,
+      liveAnswer: req.liveAnswer,
+      calmAnswer: req.calmAnswer,
+      evidenceCards: material.evidenceCards,
+      materialRecall: evidence.materialRecall,
+    }),
+  ]);
 
-  // 6. Synthesizer
-  const t5 = Date.now();
+  if (pResult.status === "fulfilled") {
+    professor = pResult.value;
+    traces.push(trace("导师风险审查员", professor.summary, tParallel, { stage: "diagnosis" }));
+  } else {
+    traces.push({ agentName: "导师风险审查员", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "professor_failed" });
+  }
+  if (gResult.status === "fulfilled") {
+    gap = gResult.value;
+    traces.push(trace("临场差距诊断器", gap.summary, tParallel, { stage: "diagnosis" }));
+  } else {
+    traces.push({ agentName: "临场差距诊断器", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "gap_failed" });
+  }
+
+  // Phase 5: Synthesizer
+  const tSynth = Date.now();
   const synthesizer = await runSynthesizerAgent({
     question: req.question,
     answersText: `临场回答：\n${req.liveAnswer}\n\n冷静回答：\n${req.calmAnswer}`,
     evidenceCards: material.evidenceCards,
-    questionIntent: intent.questionIntent,
+    questionIntent: questionPlan.questionIntent,
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
   });
-  traces.push(trace("回答融合重构器", synthesizer.summary, t5));
+  traces.push(trace("回答融合重构器", synthesizer.summary, tSynth, { stage: "synthesis" }));
 
-  // 7. Training Planner
-  const t6 = Date.now();
+  // Phase 6: Training Planner
+  const tTrain = Date.now();
   const training = await runTrainingAgent({
     mode: "pre",
     question: req.question,
-    questionIntent: intent.questionIntent,
+    questionIntent: questionPlan.questionIntent,
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
     bestMergedAnswer: synthesizer.bestMergedAnswer,
   });
-  traces.push(trace("训练规划器", training.summary, t6));
+  traces.push(trace("训练规划器", training.summary, tTrain, { stage: "training" }));
 
-  return composePreReport(material, intent, evidence, professor, gap, synthesizer, training, traces);
+  const intentOutput: IntentAgentOutput = {
+    questionIntent: questionPlan.questionIntent,
+    evaluationFocus: questionPlan.evaluationFocus,
+    idealAnswerLayers: questionPlan.idealAnswerLayers,
+    commonPitfalls: questionPlan.commonPitfalls,
+    summary: questionPlan.summary,
+  };
+
+  return composePreReport(material, intentOutput, evidence, professor, gap, synthesizer, training, traces);
 }
 
 export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostReplayReport> {
@@ -107,79 +313,111 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
   const answersText = req.answers.map((a) => `${a.label}：${a.content}`).join("\n\n");
   const bg = req.backgroundMaterials || "";
 
-  // 1. Material Analyst
-  const t0 = Date.now();
-  const material = await runMaterialAgent({
+  // Phase 1: Material
+  const { material, cached: matCached } = await resolveMaterialAnalysis({
     backgroundMaterials: bg,
     targetDirection: req.targetDirection,
+    materialAnalysis: req.materialAnalysis,
   });
-  traces.push(trace("材料分析器", material.summary, t0));
+  traces.push({
+    agentName: "材料分析器",
+    agentVersion: "v1",
+    stage: "material",
+    summary: matCached ? "复用预分析结果" : (material.summary?.slice(0, 100) || "完成"),
+    status: "success",
+    usedCachedInput: matCached,
+  });
 
-  // 2. Intent
-  const t1 = Date.now();
-  const intent = await runIntentAgent({
+  // Phase 2: Question Plan
+  const mFingerprint = makeMaterialFingerprint(bg, req.targetDirection);
+  const questionPlan = await resolveQuestionPlan({
     question: req.question,
     interviewType: req.interviewContext,
     targetDirection: req.targetDirection,
-  });
-  traces.push(trace("问题意图分析器", intent.summary, t1));
+    backgroundMaterials: bg,
+    questionPlan: req.questionPlan,
+    materialFingerprint: mFingerprint,
+    evidenceCards: material.evidenceCards,
+  }, traces);
 
-  // 3. Evidence Mapper
-  const t2 = Date.now();
+  // Phase 3: Evidence Mapper
+  const tEvidence = Date.now();
   const evidence = await runEvidenceAgent({
     question: req.question,
     answersText,
     evidenceCards: material.evidenceCards,
-    questionIntent: intent.questionIntent,
+    questionIntent: questionPlan.questionIntent,
+    expectedEvidence: questionPlan.expectedEvidence,
   });
-  traces.push(trace("材料证据匹配器", evidence.summary, t2));
+  traces.push(trace("材料证据匹配器", evidence.summary, tEvidence, { stage: "diagnosis" }));
 
-  // 4. Professor
-  const t3 = Date.now();
-  const professor = await runProfessorAgent({
-    question: req.question,
-    answersText,
-    evidenceCards: material.evidenceCards,
-    materialRecall: evidence.materialRecall,
-    targetDirection: req.targetDirection,
-  });
-  traces.push(trace("导师风险审查员", professor.summary, t3));
+  // Phase 4: Professor + Diff in parallel with per-agent fallback
+  const tParallel = Date.now();
+  let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], summary: "" };
+  let diff: DiffAgentOutput = { answerRanking: [], versionReviews: [], sentenceDiagnosis: [], summary: "" };
 
-  // 5. Answer Diff
-  const t4 = Date.now();
-  const diff = await runDiffAgent({
-    question: req.question,
-    answers: req.answers,
-    evidenceCards: material.evidenceCards,
-    materialRecall: evidence.materialRecall,
-  });
-  traces.push(trace("多版本差异诊断器", diff.summary, t4));
+  const [pResult, dResult] = await Promise.allSettled([
+    runProfessorAgent({
+      question: req.question,
+      answersText,
+      evidenceCards: material.evidenceCards,
+      materialRecall: evidence.materialRecall,
+      targetDirection: req.targetDirection,
+    }),
+    runDiffAgent({
+      question: req.question,
+      answers: req.answers,
+      evidenceCards: material.evidenceCards,
+      materialRecall: evidence.materialRecall,
+    }),
+  ]);
 
-  // 6. Synthesizer
-  const t5 = Date.now();
+  if (pResult.status === "fulfilled") {
+    professor = pResult.value;
+    traces.push(trace("导师风险审查员", professor.summary, tParallel, { stage: "diagnosis" }));
+  } else {
+    traces.push({ agentName: "导师风险审查员", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "professor_failed" });
+  }
+  if (dResult.status === "fulfilled") {
+    diff = dResult.value;
+    traces.push(trace("多版本差异诊断器", diff.summary, tParallel, { stage: "diagnosis" }));
+  } else {
+    traces.push({ agentName: "多版本差异诊断器", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "diff_failed" });
+  }
+
+  // Phase 5: Synthesizer
+  const tSynth = Date.now();
   const synthesizer = await runSynthesizerAgent({
     question: req.question,
     answersText,
     evidenceCards: material.evidenceCards,
-    questionIntent: intent.questionIntent,
+    questionIntent: questionPlan.questionIntent,
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
   });
-  traces.push(trace("回答融合重构器", synthesizer.summary, t5));
+  traces.push(trace("回答融合重构器", synthesizer.summary, tSynth, { stage: "synthesis" }));
 
-  // 7. Training Planner
-  const t6 = Date.now();
+  // Phase 6: Training Planner
+  const tTrain = Date.now();
   const training = await runTrainingAgent({
     mode: "post",
     question: req.question,
-    questionIntent: intent.questionIntent,
+    questionIntent: questionPlan.questionIntent,
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
     bestMergedAnswer: synthesizer.bestMergedAnswer,
   });
-  traces.push(trace("训练规划器", training.summary, t6));
+  traces.push(trace("训练规划器", training.summary, tTrain, { stage: "training" }));
 
-  return composePostReport(material, intent, evidence, professor, diff, synthesizer, training, traces);
+  const intentOutput: IntentAgentOutput = {
+    questionIntent: questionPlan.questionIntent,
+    evaluationFocus: questionPlan.evaluationFocus,
+    idealAnswerLayers: questionPlan.idealAnswerLayers,
+    commonPitfalls: questionPlan.commonPitfalls,
+    summary: questionPlan.summary,
+  };
+
+  return composePostReport(material, intentOutput, evidence, professor, diff, synthesizer, training, traces);
 }

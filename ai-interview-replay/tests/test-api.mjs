@@ -121,6 +121,65 @@ async function main() {
 
   // ---- Results ----
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
+
+  // ---- P1: Material pre-analysis API ----
+  console.log("--- /api/agents/material ---");
+  const matRes = await post("/api/agents/material", {
+    backgroundMaterials: "我做过一个基于大模型的论文中译英TeX编辑器，负责Prompt设计和前后端开发",
+    targetDirection: "人工智能",
+    targetSchool: "某大学",
+  });
+  check("/api/agents/material returns 200", matRes.ok);
+  check("has evidenceCards array", Array.isArray(matRes.data?.evidenceCards));
+  check("has summary", !!matRes.data?.summary);
+  check("has inputFingerprint", !!matRes.data?.inputFingerprint);
+  check("has agentTrace", Array.isArray(matRes.data?.agentTrace) && matRes.data.agentTrace.length >= 1);
+  if (!matRes.ok) console.log("    Error:", JSON.stringify(matRes.data).slice(0, 200));
+
+  // ---- P1: Question plan API ----
+  console.log("\n--- /api/agents/question-plan ---");
+  if (matRes.ok && matRes.data?.evidenceCards?.length > 0) {
+    const qpRes = await post("/api/agents/question-plan", {
+      question: "你为什么想继续做大模型与科研写作相关方向？",
+      interviewType: "夏令营",
+      targetDirection: "人工智能",
+      evidenceCards: matRes.data.evidenceCards,
+      materialFingerprint: matRes.data.inputFingerprint,
+    });
+    check("/api/agents/question-plan returns 200", qpRes.ok);
+    check("has questionIntent", !!qpRes.data?.questionIntent);
+    check("has evaluationFocus", Array.isArray(qpRes.data?.evaluationFocus));
+    check("has expectedEvidence", Array.isArray(qpRes.data?.expectedEvidence));
+    check("has inputFingerprint", !!qpRes.data?.inputFingerprint);
+    check("has agentTrace", Array.isArray(qpRes.data?.agentTrace) && qpRes.data.agentTrace.length >= 1);
+    if (!qpRes.ok) console.log("    Error:", JSON.stringify(qpRes.data).slice(0, 200));
+  } else {
+    console.log("  SKIP: material pre-analysis failed, skipping question-plan test");
+  }
+
+  // ---- P1: Replay with pre-analysis ----
+  console.log("\n--- /api/replay/pre (with pre-analysis) ---");
+  if (matRes.ok && matRes.data?.evidenceCards?.length > 0) {
+    const preWithPlan = await post("/api/replay/pre", {
+      interviewType: "夏令营",
+      targetDirection: "人工智能 / NLP",
+      backgroundMaterials: "我做过一个基于大模型的论文中译英TeX编辑器，负责Prompt设计和前后端开发",
+      question: "你为什么想继续做大模型与科研写作相关方向？",
+      liveAnswer: "我对人工智能比较感兴趣，也觉得大模型现在发展很快。",
+      calmAnswer: "我之前做过大模型辅助论文中译英TeX编辑器，在项目中发现大模型虽然生成能力强，但在科研写作场景中容易出现术语不一致。",
+      materialAnalysis: matRes.data,
+    });
+    check("pre with materialAnalysis returns 200", preWithPlan.ok);
+    check("has usedCachedInput in trace", preWithPlan.ok &&
+      Array.isArray(preWithPlan.data?.report?.agentTrace) &&
+      preWithPlan.data.report.agentTrace.some((t) => t.usedCachedInput === true || t.summary?.includes("复用")));
+    if (!preWithPlan.ok) console.log("    Error:", JSON.stringify(preWithPlan.data).slice(0, 200));
+  } else {
+    console.log("  SKIP: material pre-analysis failed, skipping replay with pre-analysis test");
+  }
+
+  // ---- Final Results ----
+  console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
   if (failed > 0) process.exit(1);
 }
 

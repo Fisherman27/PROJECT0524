@@ -5,6 +5,7 @@ import { validatePreRequest, validatePostRequest, validateQuestionsRequest } fro
 import { normalizePreReport, normalizePostReport, sanitizeJsonBlock } from "../src/lib/ai/report-normalizer.ts";
 import { formatPreCopyText, formatPostCopyText } from "../src/lib/copy-format.ts";
 import { buildPrePrompt, buildPostPrompt, buildQuestionsPrompt } from "../src/lib/ai/prompts.ts";
+import { makeMaterialFingerprint, makeQuestionFingerprint, createInputFingerprint } from "../src/lib/agents/fingerprint.ts";
 
 let passed = 0;
 let failed = 0;
@@ -130,6 +131,46 @@ export async function testAll() {
 
   const qPrompt = buildQuestionsPrompt({ backgroundMaterials: "材料", interviewType: "夏令营" });
   check("buildQuestionsPrompt includes materials", qPrompt.includes("材料"));
+
+  console.log("\n=== Unit Tests: P1 Fingerprint ===\n");
+
+  const fp1 = createInputFingerprint({ a: 1, b: "hello" });
+  const fp2 = createInputFingerprint({ a: 1, b: "hello" });
+  check("fingerprint is deterministic", fp1 === fp2);
+
+  const fp3 = createInputFingerprint({ a: 1, b: "world" });
+  check("fingerprint changes with different input", fp1 !== fp3);
+
+  const mFp = makeMaterialFingerprint("材料A", "AI", "清华");
+  const mFp2 = makeMaterialFingerprint("材料A", "AI", "清华");
+  check("material fingerprint deterministic", mFp === mFp2);
+
+  const mFp3 = makeMaterialFingerprint("材料B", "AI", "清华");
+  check("material fingerprint changes", mFp !== mFp3);
+
+  const qFp = makeQuestionFingerprint("问题1", mFp, "AI");
+  const qFp2 = makeQuestionFingerprint("问题1", mFp, "AI");
+  check("question fingerprint deterministic", qFp === qFp2);
+
+  const qFp3 = makeQuestionFingerprint("问题2", mFp, "AI");
+  check("question fingerprint changes with question", qFp !== qFp3);
+
+  console.log("\n=== Unit Tests: Pre-analysis schema pass-through ===\n");
+
+  const preWithAnalysis = validatePreRequest({
+    interviewType: "夏令营", targetDirection: "AI",
+    backgroundMaterials: "test", question: "q?", liveAnswer: "a", calmAnswer: "b",
+    materialAnalysis: {
+      evidenceCards: [{ title: "test", type: "project", content: "c", supportedQuestions: [], abilities: [], possibleFollowUps: [], usageRisk: "", suggestedExpression: "" }],
+      summary: "s", inputFingerprint: "fp", agentTrace: [],
+    },
+    questionPlan: {
+      questionIntent: "intent", evaluationFocus: [], idealAnswerLayers: [], commonPitfalls: [],
+      expectedEvidence: [], summary: "s", inputFingerprint: "fp2", agentTrace: [],
+    },
+  });
+  check("pre request passes materialAnalysis", !!preWithAnalysis.materialAnalysis);
+  check("pre request passes questionPlan", !!preWithAnalysis.questionPlan);
 
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
   return { passed, failed };

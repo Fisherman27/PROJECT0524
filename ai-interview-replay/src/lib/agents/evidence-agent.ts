@@ -1,7 +1,7 @@
 import { callLLM } from "@/lib/ai/provider";
 import { parseAgentJson, ensureArray, ensureString } from "./json";
 import { EvidenceAgentOutput } from "./types";
-import { EvidenceCard, MaterialRecall, ReportBullet } from "@/types/replay";
+import { EvidenceCard, MaterialRecall, ReportBullet, ExpectedEvidenceItem } from "@/types/replay";
 
 function normalizeEvidenceOutput(raw: unknown): EvidenceAgentOutput {
   const obj = raw as Record<string, unknown>;
@@ -28,10 +28,21 @@ export async function runEvidenceAgent(ctx: {
   answersText: string;
   evidenceCards: EvidenceCard[];
   questionIntent: string;
+  expectedEvidence?: ExpectedEvidenceItem[];
 }): Promise<EvidenceAgentOutput> {
   const cardsText = ctx.evidenceCards
     .map((c, i) => `${i + 1}. ${c.title}（${c.type}）: ${c.content} - 适合支撑: ${c.supportedQuestions.join("、")}`)
     .join("\n");
+
+  const expectedText = ctx.expectedEvidence?.length
+    ? ctx.expectedEvidence
+        .map((e, i) => `${i + 1}. ${e.evidenceCardTitle}（优先级: ${e.priority}）: ${e.reason} - 建议用法: ${e.suggestedUse}`)
+        .join("\n")
+    : "";
+
+  const expectedInstruction = expectedText
+    ? `\n## 本题预先规划应调用材料（来自证据规划器）\n${expectedText}\n\n请以这些预先规划的材料作为"expected"（应调用）的基础。`
+    : "\n请根据问题意图和可用证据卡，自行判断本题应该调用哪些材料。";
 
   const prompt = `你是一个材料证据匹配器。请判断用户的面试回答是否调用了合适的个人材料证据。
 
@@ -40,7 +51,7 @@ ${ctx.question}
 
 ## 问题意图
 ${ctx.questionIntent}
-
+${expectedInstruction}
 ## 可用证据卡
 ${cardsText || "无可用证据卡"}
 

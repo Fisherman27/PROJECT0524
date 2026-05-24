@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { AnswerVersionCard } from "@/components/answer-version-card";
 import { useAnswerVersions } from "./use-answer-versions";
-import { PostReplayRequest } from "@/types/replay";
+import { PostReplayRequest, QuestionPreAnalysis } from "@/types/replay";
 
 interface BackgroundFromHome {
   interviewType: string;
@@ -15,10 +15,18 @@ interface PostReplayFormProps {
   onSubmit: (data: PostReplayRequest) => void;
   loading: boolean;
   bg: BackgroundFromHome;
+  onQuestionReady?: (question: string) => void;
+  planningQuestion?: boolean;
+  planError?: string;
+  questionPlan?: QuestionPreAnalysis | null;
 }
 
-export function PostReplayForm({ onSubmit, loading, bg }: PostReplayFormProps) {
+export function PostReplayForm({
+  onSubmit, loading, bg,
+  onQuestionReady, planningQuestion, planError, questionPlan,
+}: PostReplayFormProps) {
   const [question, setQuestion] = useState("");
+  const questionTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
     versions,
@@ -31,6 +39,20 @@ export function PostReplayForm({ onSubmit, loading, bg }: PostReplayFormProps) {
   } = useAnswerVersions();
 
   const canSubmit = question.trim() && validCount >= 2 && !loading;
+
+  // Trigger question planning on question change (debounced)
+  useEffect(() => {
+    if (!onQuestionReady) return;
+    const q = question.trim();
+    if (!q) return;
+
+    if (questionTimer.current) clearTimeout(questionTimer.current);
+    questionTimer.current = setTimeout(() => onQuestionReady(q), 800);
+
+    return () => {
+      if (questionTimer.current) clearTimeout(questionTimer.current);
+    };
+  }, [question, onQuestionReady]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,6 +91,36 @@ export function PostReplayForm({ onSubmit, loading, bg }: PostReplayFormProps) {
           rows={2}
           className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         />
+
+        {/* Question analysis status */}
+        {question.trim() && onQuestionReady && (
+          <p className="mt-2 text-xs text-gray-400">
+            {planningQuestion ? "问题分析中..."
+              : planError ? `问题分析：${planError}（最终复盘时会自动补充）`
+              : "问题分析已完成"}
+          </p>
+        )}
+
+        {/* Question plan display (visible for post mode) */}
+        {questionPlan && questionPlan.questionIntent && (
+          <div className="mt-4 space-y-2 rounded-lg bg-blue-50 p-3">
+            <p className="text-xs font-medium text-blue-800">本题考察意图</p>
+            <p className="text-xs text-blue-700">{questionPlan.questionIntent}</p>
+            {questionPlan.expectedEvidence.length > 0 && (
+              <>
+                <p className="mt-2 text-xs font-medium text-blue-800">建议调用材料</p>
+                <ul className="list-inside list-disc space-y-0.5">
+                  {questionPlan.expectedEvidence.map((e, i) => (
+                    <li key={i} className="text-xs text-blue-600">
+                      {e.evidenceCardTitle}
+                      {e.priority === "high" && "（优先）"}
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-4">
