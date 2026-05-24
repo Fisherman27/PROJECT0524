@@ -7,7 +7,7 @@ import { LoadingState } from "@/components/loading-state";
 import { ErrorPanel } from "@/components/error-panel";
 import { AgentPipeline } from "@/components/agent-pipeline";
 import { generatePostReport } from "@/features/post-replay/post-replay-client";
-import { PostReplayRequest, PostReplayResponse, QuestionPreAnalysis, MaterialPreAnalysis } from "@/types/replay";
+import { AgentTraceItem, PostReplayRequest, PostReplayResponse, QuestionPreAnalysis } from "@/types/replay";
 import { useInterviewContext } from "@/lib/interview-context";
 import Link from "next/link";
 
@@ -32,6 +32,24 @@ export default function PostPage() {
     interviewType: ctx.interviewType,
     targetDirection: ctx.targetDirection,
     backgroundMaterials: fullMaterials,
+  };
+
+  const getPreAnalysisTraces = (): AgentTraceItem[] | undefined => {
+    const traces: AgentTraceItem[] = [];
+    if (materialAnalysis) {
+      traces.push({
+        agentName: "材料分析器",
+        agentVersion: "v1",
+        stage: "material",
+        summary: materialAnalysis.summary || "材料分析完成",
+        status: "success",
+        usedCachedInput: true,
+      });
+    }
+    if (currentQuestionPlan) {
+      traces.push(...currentQuestionPlan.agentTrace);
+    }
+    return traces.length > 0 ? traces : undefined;
   };
 
   const handleQuestionReady = useCallback(async (question: string) => {
@@ -186,7 +204,11 @@ export default function PostPage() {
           </div>
           <div className="w-56 flex-shrink-0">
             <div className="sticky top-20">
-              <AgentPipeline mode="post" />
+              <AgentPipeline
+                mode="post"
+                traces={getPreAnalysisTraces()}
+                runningStages={planningQuestion ? ["question"] : []}
+              />
             </div>
           </div>
         </div>

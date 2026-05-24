@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import mammoth from "mammoth";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20MB
 
 async function extractPdfText(buffer: Buffer): Promise<string> {
   const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
     if (file.size > MAX_FILE_SIZE) {
       return NextResponse.json(
-        { error: { code: "VALIDATION_ERROR", message: "文件不能超过 5MB" } },
+        { error: { code: "VALIDATION_ERROR", message: "文件不能超过 20MB" } },
         { status: 400 }
       );
     }

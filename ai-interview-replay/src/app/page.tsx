@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ModeCard } from "@/components/mode-card";
 import { FormField } from "@/components/form-field";
 import { MaterialFileManager } from "@/components/material-file-manager";
-import { EvidenceCardList } from "@/components/evidence-card-list";
+import { AgentPipeline } from "@/components/agent-pipeline";
 import { useInterviewContext } from "@/lib/interview-context";
-import { MaterialPreAnalysis } from "@/types/replay";
+import { MaterialPreAnalysis, AgentTraceItem } from "@/types/replay";
 
 export default function Home() {
   const {
@@ -16,12 +16,36 @@ export default function Home() {
 
   const [analyzing, setAnalyzing] = useState(false);
   const [materialError, setMaterialError] = useState("");
+  const [cleared, setCleared] = useState(false);
+
+  useEffect(() => {
+    clear();
+    setCleared(true);
+  }, []);
 
   const hasMaterials = fullMaterials.trim().length > 0;
   const materialChanged = mounted && materialAnalysis
     ? isMaterialAnalysisStale(fullMaterials, data.targetDirection, data.targetSchool)
     : false;
   const analysisDone = hasMaterials && materialAnalysis && !materialChanged;
+
+  // Build agent trace for homepage sidebar
+  const getHomepageTraces = (): AgentTraceItem[] | undefined => {
+    if (analyzing) return undefined; // animated mode
+    if (materialAnalysis && !materialChanged) {
+      return [
+        {
+          agentName: "材料分析器",
+          agentVersion: "v1",
+          stage: "material",
+          summary: materialAnalysis.summary?.slice(0, 100) || "材料分析完成",
+          status: "success",
+          usedCachedInput: true,
+        },
+      ];
+    }
+    return undefined;
+  };
 
   const handleAnalyzeMaterials = async () => {
     setAnalyzing(true);
@@ -60,11 +84,10 @@ export default function Home() {
   };
 
   const analyzingLabel = analyzing ? "分析中..."
-    : !hasMaterials ? "请先填写背景材料"
     : analysisDone ? "材料分析已完成"
     : "分析材料";
 
-  return (
+  const mainContent = (
     <div className="space-y-6">
       <div className="text-center">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
@@ -77,7 +100,7 @@ export default function Home() {
       </div>
 
       {/* Interview Background Panel */}
-      <div className="mx-auto max-w-2xl rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">面试背景</h2>
           <button
@@ -88,7 +111,7 @@ export default function Home() {
           </button>
         </div>
         <p className="mb-4 text-xs text-gray-400">
-          填写你的面试背景信息，将在&ldquo;面试前模拟&rdquo;和&ldquo;面试后复盘&rdquo;中复用
+          填写你的面试背景信息和材料文件，将在&ldquo;面试前模拟&rdquo;和&ldquo;面试后复盘&rdquo;中复用
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField
@@ -97,6 +120,7 @@ export default function Home() {
             value={data.interviewType}
             onChange={(v) => update({ interviewType: v })}
             placeholder="夏令营 / 预推免 / 导师组面试"
+            optional
           />
           <FormField
             label="目标方向"
@@ -104,6 +128,7 @@ export default function Home() {
             value={data.targetDirection}
             onChange={(v) => update({ targetDirection: v })}
             placeholder="如：人工智能 / NLP"
+            optional
           />
           <FormField
             label="目标院校"
@@ -116,7 +141,9 @@ export default function Home() {
         </div>
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">背景材料（文字）</label>
+            <label className="text-sm font-medium text-gray-700">
+              背景材料 <span className="text-xs font-normal text-gray-400">（选填）</span>
+            </label>
             <span className="text-xs text-gray-400">
               {mounted ? fullMaterials.length : 0} 字
               {files.length > 0 && ` + ${files.length} 个文件`}
@@ -125,7 +152,7 @@ export default function Home() {
           <textarea
             value={data.backgroundMaterials}
             onChange={(e) => update({ backgroundMaterials: e.target.value })}
-            placeholder="手动填写简历亮点、科研经历、项目经历等..."
+            placeholder="手动填写简历亮点、科研经历、项目经历等（选填）..."
             rows={4}
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
@@ -157,27 +184,22 @@ export default function Home() {
               {analyzingLabel}
             </button>
             {analysisDone && (
-              <span className="text-xs text-green-600">检测到 {materialAnalysis!.evidenceCards.length} 张证据卡</span>
+              <span className="text-xs text-green-600">
+                检测到 {materialAnalysis!.evidenceCards.length} 张证据卡 &mdash; 已存入上下文
+              </span>
             )}
             {materialChanged && (
               <span className="text-xs text-amber-500">材料已变更，可重新分析</span>
             )}
           </div>
           {materialError && (
-            <p className="mt-2 text-xs text-red-500">分析失败：{materialError}（可稍后重试）</p>
+            <p className="mt-2 text-xs text-red-500">分析失败：{materialError}（可稍后重试，或直接进入复盘模式）</p>
           )}
         </div>
       </div>
 
-      {/* Material Evidence Card Preview */}
-      {materialAnalysis && materialAnalysis.evidenceCards.length > 0 && (
-        <div className="mx-auto max-w-2xl">
-          <EvidenceCardList cards={materialAnalysis.evidenceCards} />
-        </div>
-      )}
-
       {/* Mode Selection */}
-      <div className="mx-auto max-w-2xl">
+      <div>
         <h2 className="mb-3 text-center text-sm font-medium text-gray-400">选择复盘模式</h2>
         <div className="grid gap-4 sm:grid-cols-2">
           <ModeCard
@@ -196,6 +218,28 @@ export default function Home() {
           />
         </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="flex gap-6">
+      <div className="min-w-0 flex-1">
+        {mainContent}
+      </div>
+      {!cleared ? null : (
+      /* Agent Pipeline sidebar — always visible from homepage */
+      <div className="w-56 flex-shrink-0">
+        <div className="sticky top-20">
+          <AgentPipeline
+            mode="pre"
+            showAll
+            animating={analyzing}
+            maxStage="material"
+            traces={getHomepageTraces()}
+          />
+        </div>
+      </div>
+      )}
     </div>
   );
 }

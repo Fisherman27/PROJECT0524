@@ -117,11 +117,17 @@ function AgentCard({
 export interface AgentPipelineProps {
   mode: "pre" | "post";
   traces?: AgentTraceItem[] | null;
+  /** Stages currently running before the final report trace exists */
+  runningStages?: string[];
   /** If true, auto-advance through simulated phases */
   animating?: boolean;
+  /** Show all agents regardless of mode */
+  showAll?: boolean;
+  /** Limit simulated animation to this stage (e.g. "material" for homepage single-agent ops) */
+  maxStage?: string;
 }
 
-export function AgentPipeline({ mode, traces, animating }: AgentPipelineProps) {
+export function AgentPipeline({ mode, traces, runningStages = [], animating, showAll, maxStage }: AgentPipelineProps) {
   const [animPhase, setAnimPhase] = useState<number>(0);
 
   useEffect(() => {
@@ -130,12 +136,15 @@ export function AgentPipeline({ mode, traces, animating }: AgentPipelineProps) {
       return;
     }
 
-    // Advance through stages on a timer
+    const maxIdx = maxStage ? STAGE_ORDER.indexOf(maxStage) : STAGE_ORDER.length - 1;
+
     setAnimPhase(0);
+    if (maxIdx <= 0) return; // single stage — no timer advance needed
+
     const interval = setInterval(() => {
       setAnimPhase((prev) => {
         const next = prev + 1;
-        if (next >= STAGE_ORDER.length) {
+        if (next > maxIdx) {
           clearInterval(interval);
           return prev;
         }
@@ -144,11 +153,13 @@ export function AgentPipeline({ mode, traces, animating }: AgentPipelineProps) {
     }, 3500);
 
     return () => clearInterval(interval);
-  }, [animating, traces]);
+  }, [animating, traces, maxStage]);
 
   const currentPhase = animating && !traces ? STAGE_ORDER[animPhase] ?? null : null;
 
-  const visibleAgents = AGENT_DEFS.filter((a) => a.mode === mode || a.mode === "both");
+  const visibleAgents = showAll
+    ? AGENT_DEFS
+    : AGENT_DEFS.filter((a) => a.mode === mode || a.mode === "both");
 
   return (
     <div className="space-y-1.5">
@@ -158,14 +169,16 @@ export function AgentPipeline({ mode, traces, animating }: AgentPipelineProps) {
           <span className="text-[10px] text-gray-300">({STAGE_ORDER[animPhase] ?? "准备中"}阶段)</span>
         )}
         {traces && (
-          <span className="text-[10px] text-gray-300">({traces.length} 角色已完成)</span>
+          <span className="text-[10px] text-gray-300">({traces.length} 条真实记录)</span>
         )}
       </div>
       {visibleAgents.map((agent) => {
-        const status = resolveStatus(agent, traces ?? null, currentPhase, animPhase);
         const trace = traces?.find(
           (t) => t.agentName.includes(agent.key) || agent.key.includes(t.agentName),
         );
+        const status = !trace && runningStages.includes(agent.stage)
+          ? "running"
+          : resolveStatus(agent, traces ?? null, currentPhase, animPhase);
         return <AgentCard key={agent.key} agent={agent} status={status} trace={trace} />;
       })}
     </div>

@@ -7,7 +7,7 @@ import { LoadingState } from "@/components/loading-state";
 import { ErrorPanel } from "@/components/error-panel";
 import { AgentPipeline } from "@/components/agent-pipeline";
 import { generatePreReport } from "@/features/pre-replay/pre-replay-client";
-import { PreReplayRequest, PreReplayResponse, QuestionPreAnalysis, MaterialPreAnalysis } from "@/types/replay";
+import { AgentTraceItem, PreReplayRequest, PreReplayResponse, QuestionPreAnalysis } from "@/types/replay";
 import { useInterviewContext } from "@/lib/interview-context";
 import Link from "next/link";
 
@@ -33,6 +33,24 @@ export default function PrePage() {
     targetDirection: ctx.targetDirection,
     targetSchool: ctx.targetSchool,
     backgroundMaterials: fullMaterials,
+  };
+
+  const getPreAnalysisTraces = (): AgentTraceItem[] | undefined => {
+    const traces: AgentTraceItem[] = [];
+    if (materialAnalysis) {
+      traces.push({
+        agentName: "材料分析器",
+        agentVersion: "v1",
+        stage: "material",
+        summary: materialAnalysis.summary || "材料分析完成",
+        status: "success",
+        usedCachedInput: true,
+      });
+    }
+    if (currentQuestionPlan) {
+      traces.push(...currentQuestionPlan.agentTrace);
+    }
+    return traces.length > 0 ? traces : undefined;
   };
 
   const handleQuestionReady = useCallback(async (question: string) => {
@@ -187,7 +205,11 @@ export default function PrePage() {
           </div>
           <div className="w-56 flex-shrink-0">
             <div className="sticky top-20">
-              <AgentPipeline mode="pre" />
+              <AgentPipeline
+                mode="pre"
+                traces={getPreAnalysisTraces()}
+                runningStages={planningQuestion ? ["question"] : []}
+              />
             </div>
           </div>
         </div>

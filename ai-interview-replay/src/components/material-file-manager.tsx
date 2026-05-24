@@ -116,7 +116,7 @@ export function MaterialFileManager({ files, onAdd, onRemove, onLabelChange }: M
           </div>
         ) : (
           <span className="text-gray-400">
-            上传材料文件（.txt .md .docx .pdf，可上传多个）
+            上传材料文件（.txt .md .docx .pdf，≤20MB，可上传多个）
           </span>
         )}
       </div>
