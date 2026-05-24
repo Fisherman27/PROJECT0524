@@ -11,7 +11,7 @@ import { useInterviewContext } from "@/lib/interview-context";
 import Link from "next/link";
 
 export default function PostPage() {
-  const { data: ctx } = useInterviewContext();
+  const { data: ctx, fullMaterials } = useInterviewContext();
   const [result, setResult] = useState<PostReplayResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,7 +19,7 @@ export default function PostPage() {
   const bg = {
     interviewType: ctx.interviewType,
     targetDirection: ctx.targetDirection,
-    backgroundMaterials: ctx.backgroundMaterials,
+    backgroundMaterials: fullMaterials,
   };
 
   const handleSubmit = async (formData: PostReplayRequest) => {

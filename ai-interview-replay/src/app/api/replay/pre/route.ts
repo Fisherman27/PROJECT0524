@@ -1,19 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { validatePreRequest } from "@/lib/schemas";
-import { buildPrePrompt, SYSTEM_PROMPT } from "@/lib/ai/prompts";
-import { callLLM } from "@/lib/ai/provider";
-import { normalizePreReport, sanitizeJsonBlock } from "@/lib/ai/report-normalizer";
+import { runPreReplayAgents } from "@/lib/agents/runner";
 import { formatPreCopyText } from "@/lib/copy-format";
 
 export async function POST(req: NextRequest) {
   try {
     const validated = validatePreRequest(await req.json());
-    const userPrompt = buildPrePrompt(validated);
-    const raw = await callLLM(SYSTEM_PROMPT, userPrompt);
-    const cleaned = sanitizeJsonBlock(raw);
-    const report = normalizePreReport(cleaned);
+    const report = await runPreReplayAgents(validated);
     const copyText = formatPreCopyText(report);
-
     return NextResponse.json({ mode: "pre", report, copyText });
   } catch (e) {
     const msg = e instanceof Error ? e.message : "UNKNOWN_ERROR";

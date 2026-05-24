@@ -63,6 +63,12 @@ async function main() {
   check("has liveAnswerDiagnosis array", Array.isArray(preRes.data.report?.liveAnswerDiagnosis));
   check("has calmAnswerImprovements array", Array.isArray(preRes.data.report?.calmAnswerImprovements));
   check("has liveLossAnalysis array", Array.isArray(preRes.data.report?.liveLossAnalysis));
+  check("has evidenceCards array", Array.isArray(preRes.data.report?.evidenceCards));
+  check("has materialRecall object", !!preRes.data.report?.materialRecall && typeof preRes.data.report.materialRecall === "object");
+  check("has riskRadar array", Array.isArray(preRes.data.report?.riskRadar));
+  check("has authenticityWarnings array", Array.isArray(preRes.data.report?.authenticityWarnings));
+  check("has replayCard object", !!preRes.data.report?.replayCard && typeof preRes.data.report.replayCard === "object");
+  check("has agentTrace >= 5", Array.isArray(preRes.data.report?.agentTrace) && preRes.data.report.agentTrace.length >= 5);
   check("has bestMergedAnswer", !!preRes.data.report?.bestMergedAnswer);
   check("has rescueTemplate", !!preRes.data.report?.rescueTemplate);
   check("has copyText", !!preRes.data.copyText);
@@ -94,6 +100,12 @@ async function main() {
   check("has answerRanking array", Array.isArray(postRes.data.report?.answerRanking));
   check("has versionReviews array", Array.isArray(postRes.data.report?.versionReviews));
   check("has sentenceDiagnosis array", Array.isArray(postRes.data.report?.sentenceDiagnosis));
+  check("has evidenceCards array", Array.isArray(postRes.data.report?.evidenceCards));
+  check("has materialRecall object", !!postRes.data.report?.materialRecall && typeof postRes.data.report.materialRecall === "object");
+  check("has riskRadar array", Array.isArray(postRes.data.report?.riskRadar));
+  check("has authenticityWarnings array", Array.isArray(postRes.data.report?.authenticityWarnings));
+  check("has replayCard object", !!postRes.data.report?.replayCard && typeof postRes.data.report.replayCard === "object");
+  check("has agentTrace >= 5", Array.isArray(postRes.data.report?.agentTrace) && postRes.data.report.agentTrace.length >= 5);
   check("has bestMergedAnswer", !!postRes.data.report?.bestMergedAnswer);
   check("has transferableFormula", !!postRes.data.report?.transferableFormula);
   check("has copyText", !!postRes.data.copyText);

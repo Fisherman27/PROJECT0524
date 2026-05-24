@@ -2,24 +2,17 @@
 
 import { ModeCard } from "@/components/mode-card";
 import { FormField } from "@/components/form-field";
-import { FileUpload } from "@/components/file-upload";
+import { MaterialFileManager } from "@/components/material-file-manager";
 import { useInterviewContext } from "@/lib/interview-context";
-import { useState } from "react";
 
 export default function Home() {
-  const { data, update, clear } = useInterviewContext();
-  const [uploadLoading, setUploadLoading] = useState(false);
+  const { data, files, update, addFile, removeFile, updateFileLabel, clear, mounted } = useInterviewContext();
 
-  const handleFileText = (text: string) => {
-    const merged = data.backgroundMaterials
-      ? `${data.backgroundMaterials}\n\n---\n\n${text}`
-      : text;
-    update({ backgroundMaterials: merged });
-  };
+  const totalChars = (mounted ? data.backgroundMaterials.length : 0) +
+    files.reduce((sum, f) => sum + f.content.length, 0);
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
       <div className="text-center">
         <h1 className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl">
           Interview Replay
@@ -70,20 +63,28 @@ export default function Home() {
         </div>
         <div className="mt-4">
           <div className="mb-1 flex items-center justify-between">
-            <label className="text-sm font-medium text-gray-700">背景材料</label>
+            <label className="text-sm font-medium text-gray-700">背景材料（文字）</label>
             <span className="text-xs text-gray-400">
-              已输入 {data.backgroundMaterials.length} 字
+              {mounted ? data.backgroundMaterials.length : 0} 字
+              {files.length > 0 && ` + ${files.length} 个文件`}
             </span>
           </div>
           <textarea
             value={data.backgroundMaterials}
             onChange={(e) => update({ backgroundMaterials: e.target.value })}
-            placeholder="填写简历、科研经历、项目经历、个人陈述等...&#10;也可以拖拽或点击下方区域上传文件"
-            rows={5}
+            placeholder="手动填写简历亮点、科研经历、项目经历等..."
+            rows={4}
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />
-          <div className="mt-2">
-            <FileUpload onText={handleFileText} loading={uploadLoading} setLoading={setUploadLoading} />
+
+          <div className="mt-3">
+            <p className="mb-2 text-xs font-medium text-gray-500">上传材料文件</p>
+            <MaterialFileManager
+              files={files}
+              onAdd={addFile}
+              onRemove={removeFile}
+              onLabelChange={updateFileLabel}
+            />
           </div>
         </div>
       </div>

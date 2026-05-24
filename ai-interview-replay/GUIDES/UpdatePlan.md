@@ -1610,70 +1610,267 @@ npm run build 通过
 
 ---
 
-## 31. P1：多 Agent 增强与可解释性
+## 31. P1：分阶段 Agent 预分析与并行诊断
 
-P1 在 P0 的轻量多 Agent 链稳定之后做增强。目标不是继续堆报告字段，而是让多 Agent 更稳定、更可解释、更适合 Demo。
-
-### 31.1 Agent 执行轨迹展示
-
-前端展示每个角色的简短结论：
+P1 在 P0 的真实轻量多 Agent 链稳定之后，不再只做“提交报告后并行跑几个 Agent”。更合理的升级方向是：
 
 ```text
-材料分析器：你有 3 张可用证据卡
-问题意图分析器：本题主要考察科研动机和方向匹配
-证据匹配器：材料召回率 1/3
-导师风险审查员：证据不足风险高
-训练规划器：建议下一题练个人贡献边界
+能提前分析的内容提前分析
+真正依赖回答的诊断等用户完成回答后再执行
+最终提交时复用前置分析结果，缩短等待时间并增强产品感
 ```
 
-这能让评委直观看到产品不是一次 Prompt 套壳。
-
-### 31.2 Agent 并行与耗时优化
-
-P0 可以顺序执行，P1 可以优化为部分并行：
+也就是说，P1 要把产品从：
 
 ```text
-Material Analyst 完成后
-Question Intent / Evidence Mapper / Skeptical Professor 可部分并行
-Gap/Diff Diagnoser 与 Professor 可并行
-Synthesizer 和 Training Planner 等待前序结果
-Composer 最后执行
+用户点击生成报告 -> 后端才开始理解材料、理解问题、诊断回答
 ```
 
-目标是降低等待时间，但不要为了并行破坏可维护性。
-
-### 31.3 Agent 输出容错和降级
-
-增强：
+升级为：
 
 ```text
-单个 Agent 返回 JSON 异常时可重试一次
-非核心 Agent 失败时报告中显示“该角色分析失败”
-核心 Agent 失败时返回清晰错误
-记录每个 Agent 的错误码和耗时
+用户确认背景材料 -> 系统先生成材料证据库
+用户确定面试问题 -> 系统先分析问题意图和应调用材料
+用户完成回答 -> 系统只跑回答相关诊断、融合和训练规划
 ```
 
-### 31.4 Agent Prompt 版本管理
+这比单纯后端并行更适合 Demo，因为用户能看到系统在不同阶段持续工作，而不是提交后才开始生成一份长报告。
+
+### 31.1 阶段一：背景材料确认后提前运行 Material Analyst
+
+触发时机：
+
+```text
+用户在首页填写背景材料
+点击“分析材料”或“确认材料”
+```
+
+运行 Agent：
+
+```text
+Material Analyst Agent
+```
+
+输出：
+
+```text
+evidenceCards
+材料摘要
+潜在追问
+建议表达
+agentTrace
+```
+
+前端展示：
+
+```text
+材料证据库预览
+材料是否足够
+每张证据卡可证明的能力
+每张证据卡的潜在追问和使用风险
+```
+
+产品价值：
+
+```text
+用户在进入模拟或复盘前，就能看到系统已经理解了自己的材料。
+这会显著减少“只是提交后生成报告”的工具感。
+```
+
+### 31.2 阶段二：问题确定后提前运行问题意图和材料规划
+
+触发时机：
+
+```text
+用户手动输入问题
+或 AI 生成问题成功
+或面试后复盘中填写真实面试问题
+```
+
+运行 Agent：
+
+```text
+Question Intent Agent
+Evidence Planner Agent
+```
+
+说明：
+
+P0 中的 `Evidence Mapper Agent` 同时承担了两件事：
+
+```text
+判断这题应该调用哪些材料
+判断用户回答实际用了哪些材料
+```
+
+P1 建议拆成：
+
+```text
+Evidence Planner：问题确定后，预判本题应该调用哪些材料
+Evidence Mapper：回答完成后，判断实际调用了哪些材料
+```
+
+阶段二输出：
+
+```text
+questionIntent
+evaluationFocus
+idealAnswerLayers
+expectedEvidence
+commonPitfalls
+agentTrace
+```
+
+前端展示策略：
+
+```text
+面试后复盘：可以直接展示问题意图和应调用材料
+面试前模拟：不要在临场回答前过度提示答案，可只显示“已完成问题分析”，详细内容等复盘后展示
+```
+
+产品价值：
+
+```text
+材料召回率的 expectedCount 不再是提交后临时判断，而是问题确定时就形成的“应调用材料清单”。
+```
+
+### 31.3 阶段三：回答完成后并行运行诊断 Agent
+
+触发时机：
+
+```text
+面试前：用户完成临场回答和冷静回答，点击生成复盘报告
+面试后：用户填写至少两个回答版本，点击生成复盘报告
+```
+
+输入应携带：
+
+```text
+原始背景材料
+预分析 evidenceCards
+预分析 questionIntent
+预分析 expectedEvidence
+用户回答
+```
+
+如果前端没有预分析结果，后端必须兜底完整跑 P0 链路，不能让用户卡死。
+
+回答完成后可以并行执行：
+
+```text
+Evidence Mapper Agent：计算实际材料召回率
+Skeptical Professor Agent：审查导师追问风险和真实性风险
+Gap Diagnoser Agent / Answer Diff Diagnoser Agent：诊断临场差距或多版本差异
+```
+
+推荐执行图：
+
+```text
+已完成预分析：
+evidenceCards + questionIntent + expectedEvidence
+↓
+并行诊断：
+Evidence Mapper
+Skeptical Professor
+Gap / Diff Diagnoser
+↓
+Answer Synthesizer
+↓
+Training Planner
+↓
+Composer
+```
+
+### 31.4 阶段四：最终报告聚合与 Agent Timeline
+
+P1 的报告不只展示最终结论，还要展示分阶段完成轨迹：
+
+```text
+材料阶段：材料分析器已生成 3 张证据卡
+问题阶段：问题意图分析器识别为科研动机题
+规划阶段：证据规划器建议调用 2 张材料
+诊断阶段：证据匹配器发现实际召回 1/2
+风险阶段：导师风险审查员发现证据不足风险高
+训练阶段：训练规划器生成下一题建议
+```
+
+前端可以把 `AgentTracePanel` 升级为 `AgentTimelinePanel`：
+
+```text
+阶段
+Agent 名称
+状态
+一句话结论
+耗时
+是否使用缓存/预分析结果
+失败时的降级说明
+```
+
+### 31.5 P1 容错和降级
+
+P1 必须增强容错，否则分阶段 Agent 体验会变脆。
+
+规则：
+
+```text
+材料预分析失败：允许用户继续填写，但提示“材料分析失败，可稍后重试”
+问题预分析失败：允许最终提交时后端补跑
+非核心诊断 Agent 失败：最终报告显示该角色失败，但保留其他结果
+Synthesizer 失败：报告仍可展示诊断结果，但最佳融合回答显示生成失败
+Training Planner 失败：报告仍可展示，复盘卡片显示降级内容
+```
+
+错误信息要求：
+
+```text
+不暴露 API Key
+不暴露原始请求头
+不把内部堆栈展示给前端
+前端显示可理解的中文提示
+```
+
+### 31.6 P1 Prompt 版本管理
 
 为每个 Agent prompt 标注版本：
 
 ```text
 material-agent@v1
 intent-agent@v1
+evidence-planner-agent@v1
+evidence-mapper-agent@v1
 professor-agent@v1
+gap-agent@v1
+diff-agent@v1
+synthesizer-agent@v1
+training-agent@v1
 ```
 
-便于后续调试和交接。
+Agent trace 中应记录：
 
-### 31.5 P1 仍然不做
+```text
+agentName
+agentVersion
+stage
+status
+summary
+durationMs
+usedCachedInput
+```
+
+### 31.7 P1 仍然不做
 
 ```text
 数据库
+账号系统
 长期记忆
 复杂自主规划 Agent
 真实 RAG
 外部 Agent 框架迁移
+院校/导师爬虫
+跨用户训练画像
 ```
+
+P1 可以使用浏览器 localStorage 缓存本轮材料预分析结果，但不能把它包装成长期数据库能力。
 
 ---
 

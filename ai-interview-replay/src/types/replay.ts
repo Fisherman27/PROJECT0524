@@ -15,20 +15,89 @@ export type SentenceDiagnosis = {
   suggestion: string;
 };
 
+// ---- Multi-Agent upgrade types ----
+
+export type EvidenceCard = {
+  title: string;
+  type: "project" | "research" | "course" | "competition" | "statement" | "other";
+  content: string;
+  supportedQuestions: string[];
+  abilities: string[];
+  possibleFollowUps: string[];
+  usageRisk: string;
+  suggestedExpression: string;
+};
+
+export type MaterialRecall = {
+  expectedCount: number;
+  usedCount: number;
+  usedEvidence: string[];
+  missingEvidence: string[];
+  recallSummary: string;
+  improvementHint: string;
+};
+
+export type RiskLevel = "低" | "中" | "高";
+
+export type RiskRadarItem = {
+  dimension:
+    | "空泛表达风险"
+    | "证据不足风险"
+    | "贡献不清风险"
+    | "过度包装风险"
+    | "导师匹配不足风险"
+    | "追问承接不足风险";
+  level: RiskLevel;
+  reason: string;
+  action: string;
+};
+
+export type AuthenticityWarning = {
+  expression: string;
+  riskType: string;
+  reason: string;
+  saferAlternative: string;
+};
+
+export type ReplayCard = {
+  biggestProblem: string;
+  keyImprovement: string;
+  nextFormula: string;
+  rescueSentence: string;
+  nextQuestion: string;
+};
+
+export type AgentTraceItem = {
+  agentName: string;
+  summary: string;
+  status: "success" | "failed";
+  durationMs?: number;
+};
+
+// ---- Extended Report types ----
+
 export type PreReplayReport = {
   questionIntent: string;
+  evidenceCards: EvidenceCard[];
+  materialRecall: MaterialRecall;
   liveAnswerDiagnosis: ReportBullet[];
   calmAnswerImprovements: ReportBullet[];
   liveLossAnalysis: ReportBullet[];
   missingEvidence: ReportBullet[];
+  riskRadar: RiskRadarItem[];
+  authenticityWarnings: AuthenticityWarning[];
   followUpRisks: RiskItem[];
   bestMergedAnswer: string;
   rescueTemplate: string;
   nextPracticeAdvice: ReportBullet[];
+  replayCard: ReplayCard;
+  agentTrace: AgentTraceItem[];
 };
 
 export type PostReplayReport = {
   questionIntent: string;
+  evidenceCards: EvidenceCard[];
+  materialRecall: MaterialRecall;
   answerRanking: Array<{
     label: string;
     rank: number;
@@ -43,11 +112,17 @@ export type PostReplayReport = {
   }>;
   sentenceDiagnosis: SentenceDiagnosis[];
   vagueAndOverpackagingRisks: RiskItem[];
+  riskRadar: RiskRadarItem[];
+  authenticityWarnings: AuthenticityWarning[];
   followUpRisks: RiskItem[];
   bestMergedAnswer: string;
   transferableFormula: string;
   nextInterviewChecklist: string[];
+  replayCard: ReplayCard;
+  agentTrace: AgentTraceItem[];
 };
+
+// ---- Request types ----
 
 export type PreReplayRequest = {
   interviewType: string;
@@ -101,14 +176,12 @@ export type QuestionsResponse = {
   reason: string;
 };
 
-// P1 stage types
 export type PreReplayStage =
   | "editing"
   | "ready"
   | "liveAnswering"
   | "liveLocked"
   | "abandoned"
-  | "calmAnswering"
   | "submitting"
   | "result";
 

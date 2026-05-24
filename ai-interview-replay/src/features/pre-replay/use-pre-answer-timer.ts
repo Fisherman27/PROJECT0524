@@ -76,10 +76,6 @@ export function usePreAnswerTimer({
     onLocked("manual");
   }, [clearTimer, onLocked]);
 
-  const startCalmAnswering = useCallback(() => {
-    setStage("calmAnswering");
-  }, []);
-
   const resetRound = useCallback(() => {
     clearTimer();
     setStage("editing");
@@ -107,7 +103,6 @@ export function usePreAnswerTimer({
     startPreparation,
     startAnswering,
     lockAnswer,
-    startCalmAnswering,
     resetRound,
   };
 }

@@ -11,7 +11,7 @@ import { useInterviewContext } from "@/lib/interview-context";
 import Link from "next/link";
 
 export default function PrePage() {
-  const { data: ctx } = useInterviewContext();
+  const { data: ctx, fullMaterials } = useInterviewContext();
   const [result, setResult] = useState<PreReplayResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +20,7 @@ export default function PrePage() {
     interviewType: ctx.interviewType,
     targetDirection: ctx.targetDirection,
     targetSchool: ctx.targetSchool,
-    backgroundMaterials: ctx.backgroundMaterials,
+    backgroundMaterials: fullMaterials,
   };
 
   const handleSubmit = async (formData: PreReplayRequest) => {
