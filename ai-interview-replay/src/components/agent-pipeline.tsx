@@ -18,7 +18,7 @@ const AGENT_DEFS: AgentDef[] = [
   { key: "问题意图分析器", name: "问题意图分析器", description: "判断面试题真实考察目标", stage: "question", mode: "both" },
   { key: "证据规划器", name: "证据规划器", description: "预判本题应调用哪些材料", stage: "question", mode: "both" },
   { key: "材料证据匹配器", name: "材料证据匹配器", description: "计算材料召回率与遗漏", stage: "diagnosis", mode: "both" },
-  { key: "导师风险审查员", name: "导师风险审查员", description: "识别追问风险与过度包装", stage: "diagnosis", mode: "both" },
+  { key: "风险审查员", name: "风险审查员", description: "识别追问风险与过度包装", stage: "diagnosis", mode: "both" },
   { key: "临场差距诊断器", name: "临场差距诊断器", description: "诊断临场回答的信息损失", stage: "diagnosis", mode: "pre" },
   { key: "多版本差异诊断器", name: "多版本差异诊断器", description: "比较多个回答版本的优劣", stage: "diagnosis", mode: "post" },
   { key: "回答融合重构器", name: "回答融合重构器", description: "融合各版本生成最佳回答", stage: "synthesis", mode: "both" },

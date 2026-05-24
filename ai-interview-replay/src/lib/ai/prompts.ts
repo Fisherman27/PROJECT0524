@@ -1,7 +1,7 @@
 import { PreReplayRequest, PostReplayRequest, QuestionsRequest } from "@/types/replay";
 
 export function buildPrePrompt(req: PreReplayRequest): string {
-  return `你是一个保研面试复盘教练。请分析以下面试材料并生成结构化复盘报告。你必须仅输出 JSON，不要包含任何其他文本或 Markdown。
+  return `你是一个保研面试复盘助理。请分析以下面试材料并生成结构化复盘报告。你必须仅输出 JSON，不要包含任何其他文本或 Markdown。
 
 ## 面试信息
 - 面试类型: ${req.interviewType}
@@ -49,7 +49,7 @@ export function buildPostPrompt(req: PostReplayRequest): string {
     .map((a) => `### ${a.label}（${a.source}）\n${a.content}`)
     .join("\n\n");
 
-  return `你是一个保研面试复盘教练。请分析以下多个回答版本并生成结构化复盘报告。你必须仅输出 JSON，不要包含任何其他文本或 Markdown。
+  return `你是一个保研面试复盘助理。请分析以下多个回答版本并生成结构化复盘报告。你必须仅输出 JSON，不要包含任何其他文本或 Markdown。
 
 ## 面试信息
 - 面试场景: ${req.interviewContext}
@@ -88,7 +88,7 @@ ${answersText}
 }
 
 export function buildQuestionsPrompt(req: QuestionsRequest): string {
-  return `你是一个保研面试准备教练。请根据用户的背景材料生成一个适合练习的面试问题。你必须仅输出 JSON。
+  return `你是一个保研面试准备助理。请根据用户的背景材料生成一个适合练习的面试问题。你必须仅输出 JSON。
 
 ## 用户信息
 ${req.interviewType ? `- 面试类型: ${req.interviewType}` : ""}
@@ -109,4 +109,4 @@ ${req.backgroundMaterials}
 }`;
 }
 
-export const SYSTEM_PROMPT = "你是一个专业的保研面试复盘教练。你的重点是帮助用户诊断面试回答中的表达损失、证据缺失、逻辑漏洞和导师追问风险。你不得编造用户未提供的经历，也不得诱导过度包装。如果信息不足，要明确说明可信度有限。输出必须精准、具体、可执行，语言适合中国保研面试语境。";
+export const SYSTEM_PROMPT = "你是一个专业的保研面试复盘助理。你的重点是帮助用户诊断面试回答中的表达损失、证据缺失、逻辑漏洞和导师追问风险。你不得编造用户未提供的经历，也不得诱导过度包装。如果信息不足，要明确说明可信度有限。输出必须精准、具体、可执行，语言适合中国保研面试语境。";

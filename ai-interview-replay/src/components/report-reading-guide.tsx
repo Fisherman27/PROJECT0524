@@ -14,7 +14,7 @@ export function ReportReadingGuide({ mode }: ReportReadingGuideProps) {
         <span>建议先看质量摘要、回答排名和最佳安全回答，再看版本差异、材料召回和风险项。</span>
       )}
       <span className="mt-1 block text-blue-500">
-        本报告由材料分析、问题意图、证据匹配、导师风险、回答融合和安全校验等角色共同生成。
+        本报告由材料分析、问题意图、证据匹配、风险、回答融合和安全校验等角色共同生成。
       </span>
     </div>
   );

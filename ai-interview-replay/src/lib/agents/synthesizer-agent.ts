@@ -14,7 +14,7 @@ import { normalizeSafeAnswer } from "./quality-normalizers";
 
 function normalizeSynthesizerOutput(raw: unknown, evidenceCards: EvidenceCard[]): SynthesizerAgentOutput {
   const obj = raw as Record<string, unknown>;
-  const bestMergedAnswer = ensureString(obj.bestMergedAnswer || (obj.safeAnswer as Record<string, unknown> | undefined)?.answer60s);
+  const bestMergedAnswer = ensureString(obj.bestMergedAnswer || (obj.safeAnswer as Record<string, unknown> | undefined)?.answer);
   return {
     bestMergedAnswer,
     safeAnswer: normalizeSafeAnswer(obj.safeAnswer, evidenceCards, bestMergedAnswer),
@@ -91,15 +91,13 @@ ${expectedText || "无"}
 7. 降低已识别的高风险和真实性风险
 8. 材料召回率目前是 ${ctx.materialRecall.usedCount}/${ctx.materialRecall.expectedCount}，请尽可能调用更多可用证据
 9. safeAnswer.usedEvidence 必须引用上述证据卡 id
-10. 仅输出JSON
+10. safeAnswer.answer 控制在150字以内，适合口语表达
+11. 仅输出JSON
 
 输出JSON结构：
 {
   "safeAnswer": {
-    "answer30s": "30秒安全回答",
-    "answer60s": "60秒安全回答",
-    "naturalVersion": "可选：更自然口语版本",
-    "researchVersion": "可选：更偏科研表达版本",
+    "answer": "安全回答，控制在150字以内，适合口语表达",
     "usedEvidence": [
       {"evidenceCardId": "card_1", "evidenceCardTitle": "证据卡标题", "reason": "为什么使用"}
     ],

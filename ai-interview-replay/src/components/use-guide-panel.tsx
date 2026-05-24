@@ -8,7 +8,7 @@ const steps = [
   { num: 1, title: "填材料", desc: "简历、项目、科研、竞赛经历都可以" },
   { num: 2, title: "分析材料", desc: "系统提取可复用证据卡，为复盘做基础" },
   { num: 3, title: "选择模式", desc: "面试前练临场表达，面试后复盘真实回答" },
-  { num: 4, title: "生成复盘", desc: "查看表达损失、材料召回、导师风险和训练建议" },
+  { num: 4, title: "生成复盘", desc: "查看表达损失、材料召回、风险和训练建议" },
 ];
 
 export function UseGuidePanel({ compact = false }: UseGuidePanelProps) {

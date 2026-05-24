@@ -52,7 +52,7 @@ function mdPressureTests(items: ProfessorPressureTest[]): string {
 }
 
 function mdSafeAnswer(answer: SafeAnswerOutput): string {
-  return `### 60 秒安全回答\n\n${answer.answer60s || "_未生成_"}\n\n### 30 秒压缩版\n\n${answer.answer30s || "_未生成_"}\n\n### 使用证据\n\n${answer.usedEvidence.map((r) => `- ${r.evidenceCardTitle}${r.reason ? `：${r.reason}` : ""}`).join("\n") || "_无_"}\n\n### 风险控制\n\n${answer.riskControls.map((r) => `- ${r}`).join("\n") || "_无_"}\n\n`;
+  return `### 安全回答\n\n${answer.answer || "_未生成_"}\n\n### 使用证据\n\n${answer.usedEvidence.map((r) => `- ${r.evidenceCardTitle}${r.reason ? `：${r.reason}` : ""}`).join("\n") || "_无_"}\n\n### 风险控制\n\n${answer.riskControls.map((r) => `- ${r}`).join("\n") || "_无_"}\n\n`;
 }
 
 function mdVerification(v: AnswerVerification): string {

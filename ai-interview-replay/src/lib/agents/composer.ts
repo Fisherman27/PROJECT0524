@@ -161,7 +161,7 @@ export function composePreReport(
   qualitySummary: QualitySummary,
   maturity: AnswerMaturity,
 ): PreReplayReport {
-  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer || synthesizer.bestMergedAnswer;
   return {
     questionIntent: intent.questionIntent,
     evidenceCards: material.evidenceCards,
@@ -177,10 +177,7 @@ export function composePreReport(
     followUpRisks: professor.followUpRisks,
     pressureTests: professor.pressureTests,
     bestMergedAnswer: finalAnswer,
-    safeAnswer: {
-      ...synthesizer.safeAnswer,
-      answer60s: finalAnswer,
-    },
+    safeAnswer: synthesizer.safeAnswer,
     answerVerification: verifier.verification,
     qualitySummary,
     answerMaturity: maturity,
@@ -204,7 +201,7 @@ export function composePostReport(
   qualitySummary: QualitySummary,
   maturity: AnswerMaturity,
 ): PostReplayReport {
-  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer || synthesizer.bestMergedAnswer;
   return {
     questionIntent: intent.questionIntent,
     evidenceCards: material.evidenceCards,
@@ -224,10 +221,7 @@ export function composePostReport(
     followUpRisks: professor.followUpRisks,
     pressureTests: professor.pressureTests,
     bestMergedAnswer: finalAnswer,
-    safeAnswer: {
-      ...synthesizer.safeAnswer,
-      answer60s: finalAnswer,
-    },
+    safeAnswer: synthesizer.safeAnswer,
     answerVerification: verifier.verification,
     qualitySummary,
     answerMaturity: maturity,

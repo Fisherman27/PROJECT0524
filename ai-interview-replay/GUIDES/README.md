@@ -7,7 +7,7 @@
 - `1-ProjectProposal.md`: 产品策划书，定义用户、痛点、双模式流程、报告结构和 P0/P1/P2 功能边界。
 - `2-CodePlanOfP0.md`: P0 实现规划，定义前端、后端、前后端协同、系统架构、代码结构和验收标准。
 - `3-CodePlanOfP1.md`: P1 实现规划，定义 5 秒开始作答、限时锁定、动态回答版本和 Markdown 导出。
-- `5-CodePlanOfUpdataP0.md`: 多 Agent 升级版 P0 实现规划，定义轻量 Agent Runner、材料分析器、问题意图分析器、证据匹配器、导师风险审查员、差距/差异诊断器、回答重构器和训练规划器的代码落地方案。
+- `5-CodePlanOfUpdataP0.md`: 多 Agent 升级版 P0 实现规划，定义轻量 Agent Runner、材料分析器、问题意图分析器、证据匹配器、风险审查员、差距/差异诊断器、回答重构器和训练规划器的代码落地方案。
 - `6-CodePlanOfUpdateP1.md`: 多 Agent 升级版 P1 实现规划，定义分阶段 Agent 预分析、材料确认后提前分析、问题确定后提前规划、最终提交时复用预分析和并行诊断的代码落地方案。
 - `7-QualityOptimizationPlan.md`: 多 Agent 质量优化方案，说明如何通过职责边界、证据引用、导师压力测试、安全回答和 Verifier 提升复盘判断质量。
 - `8-CodePlanOfQualityOpt.md`: 质量优化代码实现规划，结合当前 P0/P1 代码状态，定义证据引用、Professor 压力测试、Synthesizer 安全回答、Verifier Agent、报告展示和测试的落地方案。

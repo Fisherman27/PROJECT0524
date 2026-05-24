@@ -102,7 +102,7 @@ export default function Home() {
           Interview Replay
         </h1>
         <p className="mx-auto mt-2 max-w-xl text-sm leading-relaxed text-gray-500">
-          保研面试复盘教练 &mdash; 把面试中的模糊后悔转化成具体诊断，
+          保研面试复盘助理 &mdash; 把面试中的模糊后悔转化成具体诊断，
           把一次回答沉淀成下一次可用的表达策略。
         </p>
       </div>
@@ -163,7 +163,7 @@ export default function Home() {
           <textarea
             value={data.backgroundMaterials}
             onChange={(e) => update({ backgroundMaterials: e.target.value })}
-            placeholder="手动填写简历亮点、科研经历、项目经历等（选填）..."
+            placeholder="手动填写简历亮点、科研经历、项目经历、目标院校招生要求等（选填）..."
             rows={4}
             className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
           />

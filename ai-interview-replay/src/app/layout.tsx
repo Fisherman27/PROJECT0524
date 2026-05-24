@@ -5,7 +5,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "Interview Replay - 保研面试复盘工具",
   description:
-    "面向保研学生的AI面试复盘教练，通过面试前模拟和面试后复盘两种模式，帮助诊断回答中的表达损失、证据缺失和逻辑漏洞。",
+    "面向保研学生的AI面试复盘助理，通过面试前模拟和面试后复盘两种模式，帮助诊断回答中的表达损失、证据缺失和逻辑漏洞。",
 };
 
 export default function RootLayout({
@@ -27,7 +27,7 @@ export default function RootLayout({
                 Interview Replay
               </Link>
               <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-                保研面试复盘教练
+                保研面试复盘助理
               </span>
             </div>
           </header>

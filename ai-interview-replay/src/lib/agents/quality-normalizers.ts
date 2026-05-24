@@ -11,8 +11,7 @@ import {
 import { ensureArray, ensureString } from "./json";
 
 export const EMPTY_SAFE_ANSWER: SafeAnswerOutput = {
-  answer30s: "",
-  answer60s: "",
+  answer: "",
   usedEvidence: [],
   riskControls: [],
 };
@@ -87,12 +86,9 @@ export function normalizePressureTests(raw: unknown, evidenceCards: EvidenceCard
 
 export function normalizeSafeAnswer(raw: unknown, evidenceCards: EvidenceCard[], fallbackAnswer = ""): SafeAnswerOutput {
   const obj = (raw || {}) as Record<string, unknown>;
-  const answer60s = ensureString(obj.answer60s, fallbackAnswer);
+  const answer = ensureString(obj.answer, fallbackAnswer);
   return {
-    answer30s: ensureString(obj.answer30s, answer60s),
-    answer60s,
-    naturalVersion: ensureString(obj.naturalVersion) || undefined,
-    researchVersion: ensureString(obj.researchVersion) || undefined,
+    answer,
     usedEvidence: normalizeEvidenceRefs(obj.usedEvidence, evidenceCards),
     riskControls: ensureArray<string>(obj.riskControls),
   };

@@ -267,9 +267,9 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
 
   if (pResult.status === "fulfilled") {
     professor = pResult.value;
-    traces.push(trace("导师风险审查员", professor.summary, tParallel, { stage: "diagnosis" }));
+    traces.push(trace("风险审查员", professor.summary, tParallel, { stage: "diagnosis" }));
   } else {
-    traces.push({ agentName: "导师风险审查员", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "professor_failed" });
+    traces.push({ agentName: "风险审查员", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "professor_failed" });
   }
   if (gResult.status === "fulfilled") {
     gap = gResult.value;
@@ -300,7 +300,7 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
   try {
     verifier = await runVerifierAgent({
       question: req.question,
-      answer: synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer,
+      answer: synthesizer.safeAnswer.answer || synthesizer.bestMergedAnswer,
       evidenceCards: material.evidenceCards,
       pressureTests: professor.pressureTests,
       authenticityWarnings: professor.authenticityWarnings,
@@ -312,7 +312,7 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
     traces.push({ agentName: "回答安全校验员", agentVersion: "v1", stage: "synthesis", summary: "校验失败，已保留融合回答", status: "failed", errorCode: "verifier_failed" });
   }
 
-  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer || synthesizer.bestMergedAnswer;
 
   // Phase 6.5: Build Quality Summary & Maturity (pure functions)
   const qualitySummary = buildQualitySummary(evidence, professor, synthesizer, verifier, gap.gapClaims);
@@ -412,9 +412,9 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
 
   if (pResult.status === "fulfilled") {
     professor = pResult.value;
-    traces.push(trace("导师风险审查员", professor.summary, tParallel, { stage: "diagnosis" }));
+    traces.push(trace("风险审查员", professor.summary, tParallel, { stage: "diagnosis" }));
   } else {
-    traces.push({ agentName: "导师风险审查员", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "professor_failed" });
+    traces.push({ agentName: "风险审查员", agentVersion: "v1", stage: "diagnosis", summary: "分析失败", status: "failed", errorCode: "professor_failed" });
   }
   if (dResult.status === "fulfilled") {
     diff = dResult.value;
@@ -445,7 +445,7 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
   try {
     verifier = await runVerifierAgent({
       question: req.question,
-      answer: synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer,
+      answer: synthesizer.safeAnswer.answer || synthesizer.bestMergedAnswer,
       evidenceCards: material.evidenceCards,
       pressureTests: professor.pressureTests,
       authenticityWarnings: professor.authenticityWarnings,
@@ -457,7 +457,7 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
     traces.push({ agentName: "回答安全校验员", agentVersion: "v1", stage: "synthesis", summary: "校验失败，已保留融合回答", status: "failed", errorCode: "verifier_failed" });
   }
 
-  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer || synthesizer.bestMergedAnswer;
 
   // Phase 6.5: Build Quality Summary & Maturity (pure functions)
   const qualitySummary = buildQualitySummary(evidence, professor, synthesizer, verifier, diff.versionClaims);

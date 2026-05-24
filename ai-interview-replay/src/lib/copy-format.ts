@@ -50,7 +50,7 @@ function formatPressureTests(items: ProfessorPressureTest[]): string {
 function formatSafeAnswer(answer: SafeAnswerOutput): string {
   const evidence = answer.usedEvidence.map((r) => r.evidenceCardTitle).join("、") || "无";
   const controls = answer.riskControls.join("；") || "无";
-  return `【60秒版】\n${answer.answer60s || "未生成"}\n\n【30秒版】\n${answer.answer30s || "未生成"}\n\n使用证据：${evidence}\n风险控制：${controls}`;
+  return `${answer.answer || "未生成"}\n\n使用证据：${evidence}\n风险控制：${controls}`;
 }
 
 function formatVerification(v: AnswerVerification): string {

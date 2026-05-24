@@ -59,7 +59,7 @@ export async function runProfessorAgent(ctx: {
 }): Promise<ProfessorAgentOutput> {
   const cardsText = ctx.evidenceCards.map((c) => `- ${c.id} ${c.title}: ${c.content} 风险：${c.usageRisk}`).join("\n");
 
-  const prompt = `你是一个严格的保研面试导师风险审查员。请以审查者的视角分析回答中的风险。
+  const prompt = `你是一个严格的保研面试风险审查员。请以审查者的视角分析回答中的风险。
 
 ## 面试问题
 ${ctx.question}

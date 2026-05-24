@@ -62,10 +62,7 @@ export type ProfessorPressureTest = {
 };
 
 export type SafeAnswerOutput = {
-  answer30s: string;
-  answer60s: string;
-  naturalVersion?: string;
-  researchVersion?: string;
+  answer: string;
   usedEvidence: EvidenceReference[];
   riskControls: string[];
 };
