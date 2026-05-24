@@ -6,6 +6,7 @@
 
 - `1-ProjectProposal.md`: 产品策划书，定义用户、痛点、双模式流程、报告结构和 P0/P1/P2 功能边界。
 - `2-CodePlanOfP0.md`: P0 实现规划，定义前端、后端、前后端协同、系统架构、代码结构和验收标准。
+- `30CodePlanOfP1.md`: P1 实现规划，定义 5 秒开始作答、限时锁定、动态回答版本和 Markdown 导出。
 
 ## 使用规则
 
@@ -24,4 +25,3 @@
 4-DemoScript.md
 5-PostP0IterationPlan.md
 ```
-
