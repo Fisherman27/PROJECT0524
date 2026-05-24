@@ -3,6 +3,9 @@
 import { PostReplayReport } from "@/types/replay";
 import { ReportSection } from "@/components/report-section";
 import { CopyButton } from "@/components/copy-button";
+import { MarkdownExportButton } from "@/components/markdown-export-button";
+import { formatPostMarkdown } from "@/lib/markdown-export";
+import { safeFilename } from "@/lib/filename";
 
 interface PostReplayResultProps {
   report: PostReplayReport;
@@ -29,7 +32,13 @@ export function PostReplayResult({ report, copyText }: PostReplayResultProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-800">复盘报告</h2>
-        <CopyButton text={copyText} />
+        <div className="flex items-center gap-2">
+          <CopyButton text={copyText} />
+          <MarkdownExportButton
+            markdown={formatPostMarkdown(report)}
+            filename={safeFilename("interview-replay-post", ".md")}
+          />
+        </div>
       </div>
 
       <ReportSection title="问题真实意图" icon="">

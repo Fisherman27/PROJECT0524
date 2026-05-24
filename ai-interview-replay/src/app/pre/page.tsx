@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PreReplayForm } from "@/features/pre-replay/pre-replay-form";
 import { PreReplayResult } from "@/features/pre-replay/pre-replay-result";
 import { LoadingState } from "@/components/loading-state";
@@ -16,7 +16,7 @@ export default function PrePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaults = {
+  const bg = {
     interviewType: ctx.interviewType,
     targetDirection: ctx.targetDirection,
     targetSchool: ctx.targetSchool,
@@ -37,6 +37,11 @@ export default function PrePage() {
     }
   };
 
+  const handleNewRound = () => {
+    setResult(null);
+    setError(null);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2 text-sm text-gray-400">
@@ -51,15 +56,30 @@ export default function PrePage() {
         <div>
           <h1 className="text-xl font-bold text-gray-900">面试前模拟</h1>
           <p className="mt-1 text-sm text-gray-500">
-            先限时写临场回答，再冷静重答 — 发现紧张时你丢掉了哪些关键信息。
+            限时临场作答 + 冷静重答 — 发现紧张时你丢掉了哪些关键信息。
           </p>
         </div>
       )}
 
       {error && <ErrorPanel message={error} onRetry={() => setError(null)} />}
       {loading && <LoadingState />}
-      {result && !loading && <PreReplayResult report={result.report} copyText={result.copyText} />}
-      {!result && !loading && <PreReplayForm onSubmit={handleSubmit} loading={loading} defaults={defaults} />}
+
+      {result && !loading && (
+        <>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-gray-500">面试前模拟 — 复盘完成</h1>
+            <button
+              onClick={handleNewRound}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
+            >
+              + 新一轮复盘
+            </button>
+          </div>
+          <PreReplayResult report={result.report} copyText={result.copyText} />
+        </>
+      )}
+
+      {!result && !loading && <PreReplayForm onSubmit={handleSubmit} loading={loading} bg={bg} />}
     </div>
   );
 }

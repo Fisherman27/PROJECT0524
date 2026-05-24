@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { PostReplayForm } from "@/features/post-replay/post-replay-form";
 import { PostReplayResult } from "@/features/post-replay/post-replay-result";
 import { LoadingState } from "@/components/loading-state";
@@ -16,8 +16,8 @@ export default function PostPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const defaults = {
-    interviewContext: ctx.interviewType,
+  const bg = {
+    interviewType: ctx.interviewType,
     targetDirection: ctx.targetDirection,
     backgroundMaterials: ctx.backgroundMaterials,
   };
@@ -34,6 +34,11 @@ export default function PostPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleNewRound = () => {
+    setResult(null);
+    setError(null);
   };
 
   return (
@@ -57,8 +62,23 @@ export default function PostPage() {
 
       {error && <ErrorPanel message={error} onRetry={() => setError(null)} />}
       {loading && <LoadingState />}
-      {result && !loading && <PostReplayResult report={result.report} copyText={result.copyText} />}
-      {!result && !loading && <PostReplayForm onSubmit={handleSubmit} loading={loading} defaults={defaults} />}
+
+      {result && !loading && (
+        <>
+          <div className="flex items-center justify-between">
+            <h1 className="text-lg font-semibold text-gray-500">面试后复盘 — 复盘完成</h1>
+            <button
+              onClick={handleNewRound}
+              className="rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-50"
+            >
+              + 新一轮复盘
+            </button>
+          </div>
+          <PostReplayResult report={result.report} copyText={result.copyText} />
+        </>
+      )}
+
+      {!result && !loading && <PostReplayForm onSubmit={handleSubmit} loading={loading} bg={bg} />}
     </div>
   );
 }

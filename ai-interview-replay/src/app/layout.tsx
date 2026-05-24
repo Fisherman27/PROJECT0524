@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -19,12 +20,12 @@ export default function RootLayout({
           {/* Top bar */}
           <header className="sticky top-0 z-20 border-b border-white/20 bg-white/70 backdrop-blur-lg">
             <div className="mx-auto flex h-14 max-w-4xl items-center justify-between px-6">
-              <a href="/" className="flex items-center gap-2 font-bold text-gray-900 transition-opacity hover:opacity-70">
+              <Link href="/" className="flex items-center gap-2 font-bold text-gray-900 transition-opacity hover:opacity-70">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-600 text-xs text-white">
                   IR
                 </span>
                 Interview Replay
-              </a>
+              </Link>
               <span className="rounded-full bg-blue-50 px-2.5 py-0.5 text-xs font-medium text-blue-700">
                 保研面试复盘教练
               </span>

@@ -10,7 +10,12 @@ export async function POST(req: NextRequest) {
     const userPrompt = buildQuestionsPrompt(validated);
     const raw = await callLLM(SYSTEM_PROMPT, userPrompt);
     const cleaned = sanitizeJsonBlock(raw);
-    const parsed = JSON.parse(cleaned);
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch {
+      throw new Error("MODEL_RESPONSE_INVALID");
+    }
 
     return NextResponse.json({
       question: parsed.question || "",

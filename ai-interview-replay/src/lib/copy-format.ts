@@ -1,4 +1,4 @@
-import { PreReplayReport, PostReplayReport, RiskItem, ReportBullet, SentenceDiagnosis } from "@/types/replay";
+import { PreReplayReport, PostReplayReport, RiskItem, ReportBullet } from "@/types/replay";
 
 function formatBullets(list: ReportBullet[]): string {
   return list.map((b) => `- ${b.title}：${b.detail}`).join("\n");

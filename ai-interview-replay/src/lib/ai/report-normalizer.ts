@@ -1,7 +1,5 @@
 import { PreReplayReport, PostReplayReport } from "@/types/replay";
 
-type JsonResponse = PreReplayReport | PostReplayReport;
-
 export function normalizePreReport(raw: string): PreReplayReport {
   try {
     const parsed = JSON.parse(raw) as PreReplayReport;

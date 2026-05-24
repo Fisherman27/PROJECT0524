@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 
 export interface InterviewContextData {
   interviewType: string;
@@ -39,11 +39,7 @@ function save(data: InterviewContextData) {
 }
 
 export function useInterviewContext() {
-  const [data, setData] = useState<InterviewContextData>(defaultContext);
-
-  useEffect(() => {
-    setData(load());
-  }, []);
+  const [data, setData] = useState<InterviewContextData>(load);
 
   const update = useCallback((partial: Partial<InterviewContextData>) => {
     setData((prev) => {

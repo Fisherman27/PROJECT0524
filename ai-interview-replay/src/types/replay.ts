@@ -100,3 +100,16 @@ export type QuestionsResponse = {
   question: string;
   reason: string;
 };
+
+// P1 stage types
+export type PreReplayStage =
+  | "editing"
+  | "ready"
+  | "liveAnswering"
+  | "liveLocked"
+  | "abandoned"
+  | "calmAnswering"
+  | "submitting"
+  | "result";
+
+export type AnswerLockReason = "timeout" | "manual";

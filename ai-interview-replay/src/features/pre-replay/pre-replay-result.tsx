@@ -3,6 +3,9 @@
 import { PreReplayReport } from "@/types/replay";
 import { ReportSection } from "@/components/report-section";
 import { CopyButton } from "@/components/copy-button";
+import { MarkdownExportButton } from "@/components/markdown-export-button";
+import { formatPreMarkdown } from "@/lib/markdown-export";
+import { safeFilename } from "@/lib/filename";
 
 interface PreReplayResultProps {
   report: PreReplayReport;
@@ -46,7 +49,13 @@ export function PreReplayResult({ report, copyText }: PreReplayResultProps) {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-800">复盘报告</h2>
-        <CopyButton text={copyText} />
+        <div className="flex items-center gap-2">
+          <CopyButton text={copyText} />
+          <MarkdownExportButton
+            markdown={formatPreMarkdown(report)}
+            filename={safeFilename("interview-replay-pre", ".md")}
+          />
+        </div>
       </div>
 
       <ReportSection title="问题真实意图" icon="">{report.questionIntent && <p className="text-sm text-gray-700">{report.questionIntent}</p>}</ReportSection>

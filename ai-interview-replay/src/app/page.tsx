@@ -42,7 +42,7 @@ export default function Home() {
           </button>
         </div>
         <p className="mb-4 text-xs text-gray-400">
-          填写你的面试背景信息，将在"面试前模拟"和"面试后复盘"中复用
+          填写你的面试背景信息，将在&ldquo;面试前模拟&rdquo;和&ldquo;面试后复盘&rdquo;中复用
         </p>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField
