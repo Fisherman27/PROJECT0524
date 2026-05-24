@@ -15,7 +15,9 @@ import { runDiffAgent } from "./diff-agent";
 import { runSynthesizerAgent } from "./synthesizer-agent";
 import { runVerifierAgent } from "./verifier-agent";
 import { runTrainingAgent } from "./training-agent";
-import { composePreReport, composePostReport } from "./composer";
+import {
+  composePreReport, composePostReport, buildQualitySummary, assessMaturity,
+} from "./composer";
 import { makeMaterialFingerprint, makeQuestionFingerprint } from "./fingerprint";
 import { MaterialAgentOutput, IntentAgentOutput, ProfessorAgentOutput, GapAgentOutput, DiffAgentOutput, VerifierAgentOutput } from "./types";
 import { EMPTY_VERIFICATION } from "./quality-normalizers";
@@ -244,7 +246,7 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
   // Phase 4: Professor + Gap in parallel with per-agent fallback
   const tParallel = Date.now();
   let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], pressureTests: [], summary: "" };
-  let gap: GapAgentOutput = { liveAnswerDiagnosis: [], calmAnswerImprovements: [], liveLossAnalysis: [], summary: "" };
+  let gap: GapAgentOutput = { liveAnswerDiagnosis: [], calmAnswerImprovements: [], liveLossAnalysis: [], gapClaims: [], summary: "" };
 
   const [pResult, gResult] = await Promise.allSettled([
     runProfessorAgent({
@@ -312,6 +314,10 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
 
   const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
 
+  // Phase 6.5: Build Quality Summary & Maturity (pure functions)
+  const qualitySummary = buildQualitySummary(evidence, professor, synthesizer, verifier, gap.gapClaims);
+  const maturity = assessMaturity(evidence.materialRecall, evidence.evidenceClaims, professor.pressureTests, verifier.verification);
+
   // Phase 7: Training Planner
   const tTrain = Date.now();
   const training = await runTrainingAgent({
@@ -322,6 +328,9 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
     bestMergedAnswer: finalAnswer,
+    qualitySummary,
+    answerVerification: verifier.verification,
+    maturity,
   });
   traces.push(trace("训练规划器", training.summary, tTrain, { stage: "training" }));
 
@@ -333,7 +342,7 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
     summary: questionPlan.summary,
   };
 
-  return composePreReport(material, intentOutput, evidence, professor, gap, synthesizer, verifier, training, traces);
+  return composePreReport(material, intentOutput, evidence, professor, gap, synthesizer, verifier, training, traces, qualitySummary, maturity);
 }
 
 export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostReplayReport> {
@@ -383,7 +392,7 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
   // Phase 4: Professor + Diff in parallel with per-agent fallback
   const tParallel = Date.now();
   let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], pressureTests: [], summary: "" };
-  let diff: DiffAgentOutput = { answerRanking: [], versionReviews: [], sentenceDiagnosis: [], summary: "" };
+  let diff: DiffAgentOutput = { answerRanking: [], versionReviews: [], versionClaims: [], sentenceDiagnosis: [], summary: "" };
 
   const [pResult, dResult] = await Promise.allSettled([
     runProfessorAgent({
@@ -450,6 +459,10 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
 
   const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
 
+  // Phase 6.5: Build Quality Summary & Maturity (pure functions)
+  const qualitySummary = buildQualitySummary(evidence, professor, synthesizer, verifier, diff.versionClaims);
+  const maturity = assessMaturity(evidence.materialRecall, evidence.evidenceClaims, professor.pressureTests, verifier.verification);
+
   // Phase 7: Training Planner
   const tTrain = Date.now();
   const training = await runTrainingAgent({
@@ -460,6 +473,9 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
     bestMergedAnswer: finalAnswer,
+    qualitySummary,
+    answerVerification: verifier.verification,
+    maturity,
   });
   traces.push(trace("训练规划器", training.summary, tTrain, { stage: "training" }));
 
@@ -471,5 +487,5 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
     summary: questionPlan.summary,
   };
 
-  return composePostReport(material, intentOutput, evidence, professor, diff, synthesizer, verifier, training, traces);
+  return composePostReport(material, intentOutput, evidence, professor, diff, synthesizer, verifier, training, traces, qualitySummary, maturity);
 }

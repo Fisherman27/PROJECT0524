@@ -1,0 +1,12 @@
+{
+  "name": "project_intro",
+  "backgroundMaterials": "基于大模型的论文中译英 TeX 编辑器：负责 Prompt 设计、前后端开发和翻译质量优化。项目获得校级优秀结题。掌握 React、Node.js、LLM API 调用、CI/CD。",
+  "question": "请介绍你的项目经历。",
+  "liveAnswer": "我做过一个大模型辅助论文翻译工具，主要就是调用 API 把中文论文翻译成英文，效果还不错。",
+  "calmAnswer": "我主导开发了一个大模型辅助的论文中译英 TeX 编辑器。这个项目解决的核心问题是：传统机翻无法处理 LaTeX 格式，而大模型翻译虽然流畅但容易出现术语不一致和格式破坏。我主要负责 Prompt 模板设计和翻译质量评估，通过分析 50 篇论文的翻译结果，我们将术语一致性从 62% 提升到了 89%。",
+  "expected": {
+    "mustMentionEvidenceTitles": ["大模型论文中译英 TeX 编辑器"],
+    "mustDetectRisks": ["贡献夸大", "过度包装"],
+    "forbiddenPhrasesInAnswer": ["显著提升", "深入研究", "主导"]
+  }
+}

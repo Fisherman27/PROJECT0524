@@ -1,9 +1,10 @@
 import { callLLM } from "@/lib/ai/provider";
 import { parseAgentJson, ensureArray, ensureString } from "./json";
 import { GapAgentOutput } from "./types";
-import { EvidenceCard, MaterialRecall, ReportBullet } from "@/types/replay";
+import { EvidenceCard, MaterialRecall, ReportBullet, DiagnosisClaim, EvidenceReference, MissingInfoItem } from "@/types/replay";
+import { normalizeDiagnosisClaims } from "./quality-normalizers";
 
-function normalizeGapOutput(raw: unknown): GapAgentOutput {
+function normalizeGapOutput(raw: unknown, evidenceCards: EvidenceCard[]): GapAgentOutput {
   const obj = raw as Record<string, unknown>;
   return {
     liveAnswerDiagnosis: ensureArray<ReportBullet>(obj.liveAnswerDiagnosis).map((b) => ({
@@ -18,6 +19,7 @@ function normalizeGapOutput(raw: unknown): GapAgentOutput {
       title: ensureString((b as Record<string, unknown>).title),
       detail: ensureString((b as Record<string, unknown>).detail),
     })),
+    gapClaims: normalizeDiagnosisClaims(obj.gapClaims, evidenceCards),
     summary: ensureString(obj.summary),
   };
 }
@@ -56,7 +58,11 @@ ${ctx.calmAnswer}
    - 深度损失：停留在兴趣/热爱/前景等表层表达
    - 匹配损失：没有连接目标方向
    - 边界损失：没有说清个人真实贡献
-4. 仅输出JSON
+4. 输出 evidenceClaims（gapClaims），每条标注证据引用或信息缺口：
+   - 如果判断"证据损失"，必须指出是哪张证据卡没被临场回答调用
+   - 如果判断"边界损失"，必须指出缺少什么个人贡献信息
+   - confidence：high（证据充分）/ medium（部分推理）/ low（信息不足）
+5. 仅输出JSON
 
 输出JSON结构：
 {
@@ -69,12 +75,15 @@ ${ctx.calmAnswer}
   "liveLossAnalysis": [
     {"title": "损失类型（结论损失/证据损失/结构损失/深度损失/匹配损失/边界损失）", "detail": "丢失了什么"}
   ],
+  "gapClaims": [
+    {"title": "结论标题", "detail": "结论详情", "evidenceRefs": [{"evidenceCardId": "card_1", "evidenceCardTitle": "标题", "reason": "引用原因"}], "missingInfo": [{"field": "缺失字段", "reason": "缺失原因", "howToSupplement": "如何补充"}], "confidence": "high|medium|low"}
+  ],
   "summary": "一句话总结临场损失"
 }`;
 
   const raw = await callLLM(
-    "你是一个保研面试临场差距诊断师。你的任务是分析紧张状态下的回答相比冷静回答丢失了什么。仅输出JSON。",
+    "你是一个保研面试临场差距诊断师。你的任务是分析紧张状态下的回答相比冷静回答丢失了什么。所有诊断结论必须绑定证据卡或信息缺口。仅输出JSON。",
     prompt
   );
-  return normalizeGapOutput(parseAgentJson(raw));
+  return normalizeGapOutput(parseAgentJson(raw), ctx.evidenceCards);
 }

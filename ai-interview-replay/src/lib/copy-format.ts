@@ -1,11 +1,13 @@
 import {
   AgentTraceItem,
+  AnswerMaturity,
   AnswerVerification,
   DiagnosisClaim,
   EvidenceCard,
   PostReplayReport,
   PreReplayReport,
   ProfessorPressureTest,
+  QualitySummary,
   ReplayCard,
   ReportBullet,
   RiskItem,
@@ -64,6 +66,15 @@ function formatCard(c: ReplayCard): string {
 下一题：${c.nextQuestion}`;
 }
 
+function formatQualitySummary(s: QualitySummary, m?: AnswerMaturity): string {
+  const maturity = m ? `\n当前可训练层级：${m.level} ${m.label}\n${m.reason}\n升级方向：${m.nextUpgrade}` : "";
+  const conflicts = s.conflictNotes.length > 0 ? `\n冲突说明：${s.conflictNotes.join("；")}` : "";
+  return `一句话诊断：${s.oneSentenceDiagnosis}
+材料召回：${s.evidenceRecallText}
+安全校验：${s.answerSafety === "passed" ? "通过" : s.answerSafety === "needs_fix" ? "已修正" : "未检查"}
+最大风险：${s.topRisk}${maturity}${conflicts}`;
+}
+
 function formatTrace(traces: AgentTraceItem[]): string {
   return traces.map((t) => `- ${t.agentName}（${t.status} ${t.durationMs ?? "?"}ms）: ${t.summary}`).join("\n");
 }
@@ -71,50 +82,56 @@ function formatTrace(traces: AgentTraceItem[]): string {
 export function formatPreCopyText(report: PreReplayReport): string {
   return `【面试复盘报告 - 面试前模拟】
 
-一、问题真实意图
+一、质量摘要
+${formatQualitySummary(report.qualitySummary, report.answerMaturity)}
+
+二、问题真实意图
 ${report.questionIntent}
 
-二、材料证据库
+三、材料证据库
 ${formatCards(report.evidenceCards) || "无"}
 
-三、材料召回率
+四、材料召回率
 应使用 ${report.materialRecall?.expectedCount ?? 0} 项 / 实际使用 ${report.materialRecall?.usedCount ?? 0} 项
 ${report.materialRecall?.recallSummary || ""}
 
-四、临场回答诊断
+五、临场回答诊断
 ${formatBullets(report.liveAnswerDiagnosis) || "无"}
 
-五、临场损失分析
+六、临场损失分析
 ${formatBullets(report.liveLossAnalysis) || "无"}
 
-六、风险雷达
+七、临场差距诊断
+${formatClaims(report.gapClaims) || "无"}
+
+八、风险雷达
 ${formatRadar(report.riskRadar) || "无"}
 
-七、证据依据
+九、证据依据
 ${formatClaims(report.evidenceClaims) || "无"}
 
-八、真实性风险
-${report.authenticityWarnings.map((w) => `- ${w.riskType}：“${w.expression}” → ${w.saferAlternative}`).join("\n") || "无"}
+十、真实性风险
+${report.authenticityWarnings.map((w) => `- ${w.riskType}："${w.expression}" → ${w.saferAlternative}`).join("\n") || "无"}
 
-九、导师追问风险
+十一、导师追问风险
 ${formatRisks(report.followUpRisks) || "无"}
 
-十、导师压力测试
+十二、导师压力测试
 ${formatPressureTests(report.pressureTests) || "无"}
 
-十一、安全融合回答
+十三、安全融合回答
 ${formatSafeAnswer(report.safeAnswer)}
 
-十二、回答安全校验
+十四、回答安全校验
 ${formatVerification(report.answerVerification)}
 
-十三、下次救场模板
+十五、下次救场模板
 ${report.rescueTemplate}
 
-十四、复盘卡片
+十六、复盘卡片
 ${formatCard(report.replayCard)}
 
-十五、多角色诊断链
+十七、多角色诊断链
 ${formatTrace(report.agentTrace)}`;
 }
 
@@ -133,52 +150,58 @@ export function formatPostCopyText(report: PostReplayReport): string {
 
   return `【面试复盘报告 - 面试后复盘】
 
-一、问题真实意图
+一、质量摘要
+${formatQualitySummary(report.qualitySummary, report.answerMaturity)}
+
+二、问题真实意图
 ${report.questionIntent}
 
-二、材料证据库
+三、材料证据库
 ${formatCards(report.evidenceCards) || "无"}
 
-三、材料召回率
+四、材料召回率
 应使用 ${report.materialRecall?.expectedCount ?? 0} 项 / 实际使用 ${report.materialRecall?.usedCount ?? 0} 项
 ${report.materialRecall?.recallSummary || ""}
 
-四、回答综合排名
+五、回答综合排名
 ${ranking || "无"}
 
-五、各版本优缺点
+六、版本差异诊断
+${formatClaims(report.versionClaims) || "无"}
+
+七、各版本优缺点
 ${reviews || "无"}
 
-六、逐句诊断
+八、逐句诊断
 ${diagnoses || "无"}
 
-七、风险雷达
+九、风险雷达
 ${formatRadar(report.riskRadar) || "无"}
 
-八、证据依据
+十、证据依据
 ${formatClaims(report.evidenceClaims) || "无"}
 
-九、真实性风险
-${report.authenticityWarnings.map((w) => `- ${w.riskType}：“${w.expression}” → ${w.saferAlternative}`).join("\n") || "无"}
+十一、真实性风险
+${report.authenticityWarnings.map((w) => `- ${w.riskType}："${w.expression}" → ${w.saferAlternative}`).join("\n") || "无"}
 
-十、导师可能追问
+十二、导师可能追问
 ${formatRisks(report.followUpRisks) || "无"}
 
-十一、导师压力测试
+十三、导师压力测试
 ${formatPressureTests(report.pressureTests) || "无"}
 
-十二、安全融合回答
+十四、安全融合回答
 ${formatSafeAnswer(report.safeAnswer)}
 
-十三、回答安全校验
+十五、回答安全校验
 ${formatVerification(report.answerVerification)}
 
-十四、可迁移回答公式
+十六、可迁移回答公式
 ${report.transferableFormula}
 
-十五、复盘卡片
+十七、复盘卡片
 ${formatCard(report.replayCard)}
 
-十六、多角色诊断链
+十八、多角色诊断链
 ${formatTrace(report.agentTrace)}`;
 }

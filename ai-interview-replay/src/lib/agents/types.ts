@@ -54,6 +54,7 @@ export type GapAgentOutput = {
   liveAnswerDiagnosis: ReportBullet[];
   calmAnswerImprovements: ReportBullet[];
   liveLossAnalysis: ReportBullet[];
+  gapClaims: DiagnosisClaim[];
   summary: string;
 };
 
@@ -66,6 +67,7 @@ export type DiffAgentOutput = {
     keepParts: string[];
     avoidParts: string[];
   }>;
+  versionClaims: DiagnosisClaim[];
   sentenceDiagnosis: SentenceDiagnosis[];
   summary: string;
 };

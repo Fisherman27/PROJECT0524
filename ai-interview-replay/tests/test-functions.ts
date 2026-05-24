@@ -7,6 +7,9 @@ import { formatPreCopyText, formatPostCopyText } from "../src/lib/copy-format.ts
 import { formatPreMarkdown, formatPostMarkdown } from "../src/lib/markdown-export.ts";
 import { buildPrePrompt, buildPostPrompt, buildQuestionsPrompt } from "../src/lib/ai/prompts.ts";
 import { makeMaterialFingerprint, makeQuestionFingerprint, createInputFingerprint } from "../src/lib/agents/fingerprint.ts";
+import { assessMaturity } from "../src/lib/agents/composer.ts";
+import { readFileSync } from "fs";
+import { join } from "path";
 
 let passed = 0;
 let failed = 0;
@@ -195,6 +198,83 @@ export async function testAll() {
   });
   check("pre request passes materialAnalysis", !!preWithAnalysis.materialAnalysis);
   check("pre request passes questionPlan", !!preWithAnalysis.questionPlan);
+
+  console.log("\n=== Unit Tests: P1 Quality Summary & Maturity ===\n");
+
+  // Test assessMaturity: L1 template expression
+  const matL1 = assessMaturity(
+    { expectedCount: 3, usedCount: 0, usedEvidence: [], missingEvidence: [], recallSummary: "", improvementHint: "" },
+    [],
+    [],
+    { passed: true, summary: "", issues: [] },
+  );
+  check("assessMaturity L1 template expression", matL1.level === "L1");
+
+  // Test assessMaturity: L3 has evidence + problem awareness
+  const matL3 = assessMaturity(
+    { expectedCount: 3, usedCount: 2, usedEvidence: [], missingEvidence: [], recallSummary: "", improvementHint: "" },
+    [{ title: "test", detail: "test", evidenceRefs: [], missingInfo: [], confidence: "high" }],
+    [{ riskyExpression: "test", likelyQuestion: "test", dangerReason: "贡献夸大风险", currentSupportLevel: "medium", safeResponse: "test", missingInfo: [], evidenceRefs: [] }],
+    { passed: true, summary: "", issues: [] },
+  );
+  check("assessMaturity L3 has experience + problem awareness (contribution unclear)", matL3.level === "L3");
+
+  // Test assessMaturity: L5 all clear
+  const matL5 = assessMaturity(
+    { expectedCount: 3, usedCount: 3, usedEvidence: [], missingEvidence: [], recallSummary: "", improvementHint: "" },
+    [{ title: "test", detail: "test", evidenceRefs: [], missingInfo: [], confidence: "high" }],
+    [{ riskyExpression: "test", likelyQuestion: "test", dangerReason: "safe", currentSupportLevel: "strong", safeResponse: "test", missingInfo: [], evidenceRefs: [] }],
+    { passed: true, summary: "", issues: [] },
+  );
+  check("assessMaturity L5 clear boundaries", matL5.level === "L5");
+
+  // Test normalizer includes P1 fields
+  const preJsonP1 = JSON.stringify({
+    questionIntent: "考察科研动机",
+    gapClaims: [{ title: "证据损失", detail: "临场未使用项目证据", evidenceRefs: [{ evidenceCardId: "card_1", evidenceCardTitle: "test", reason: "test" }], missingInfo: [], confidence: "high" }],
+    evidenceClaims: [],
+    qualitySummary: { oneSentenceDiagnosis: "一句话诊断", topRisk: "证据不足", topMissingInfo: [], evidenceRecallText: "0/3", answerSafety: "passed", conflictNotes: [] },
+    answerMaturity: { level: "L1", label: "模板表达", reason: "空泛", nextUpgrade: "补充经历" },
+  });
+  const preP1 = normalizePreReport(preJsonP1);
+  check("normalizer preserves gapClaims", preP1.gapClaims.length === 1);
+  check("normalizer preserves qualitySummary", preP1.qualitySummary.oneSentenceDiagnosis === "一句话诊断");
+  check("normalizer preserves answerMaturity", preP1.answerMaturity?.level === "L1");
+
+  const postJsonP1 = JSON.stringify({
+    versionClaims: [{ title: "版本B更安全", detail: "B版降低了过度包装", evidenceRefs: [], missingInfo: [], confidence: "medium" }],
+    qualitySummary: { oneSentenceDiagnosis: "诊断2", topRisk: "贡献夸大", topMissingInfo: [], evidenceRecallText: "1/2", answerSafety: "needs_fix", conflictNotes: ["安全校验优先"] },
+    answerMaturity: { level: "L3", label: "有问题意识", reason: "有项目", nextUpgrade: "连接导师方向" },
+  });
+  const postP1 = normalizePostReport(postJsonP1);
+  check("normalizer preserves versionClaims", postP1.versionClaims.length === 1);
+  check("normalizer preserves post qualitySummary", postP1.qualitySummary.answerSafety === "needs_fix");
+  check("normalizer preserves post answerMaturity", postP1.answerMaturity?.level === "L3");
+
+  // Test copy/markdown includes P1 sections
+  check("pre copy contains quality summary", formatPreCopyText(preP1).includes("质量摘要"));
+  check("pre copy contains gap diagnosis", formatPreCopyText(preP1).includes("临场差距诊断"));
+  check("post copy contains quality summary", formatPostCopyText(postP1).includes("质量摘要"));
+  check("post copy contains version diagnosis", formatPostCopyText(postP1).includes("版本差异诊断"));
+  check("pre markdown contains quality summary", formatPreMarkdown(preP1).includes("质量摘要"));
+  check("pre markdown contains gap diagnosis", formatPreMarkdown(preP1).includes("临场差距诊断"));
+  check("post markdown contains quality summary", formatPostMarkdown(postP1).includes("质量摘要"));
+  check("post markdown contains version diagnosis", formatPostMarkdown(postP1).includes("版本差异诊断"));
+
+  // Test quality fixtures exist and valid JSON
+  const fixtureNames = ["motivation", "project_intro", "contribution_boundary", "pressure_question", "future_plan"];
+  for (const name of fixtureNames) {
+    const raw = readFileSync(join(import.meta.dirname, "fixtures", "quality", `${name}.json`), "utf-8");
+    const parsed = JSON.parse(raw);
+    check(`fixture ${name} has name`, typeof parsed.name === "string");
+    check(`fixture ${name} has backgroundMaterials`, typeof parsed.backgroundMaterials === "string");
+    check(`fixture ${name} has question`, typeof parsed.question === "string");
+    check(`fixture ${name} has liveAnswer`, typeof parsed.liveAnswer === "string");
+    check(`fixture ${name} has calmAnswer`, typeof parsed.calmAnswer === "string");
+    check(`fixture ${name} has expected`, typeof parsed.expected === "object");
+    check(`fixture ${name} has mustDetectRisks`, Array.isArray(parsed.expected.mustDetectRisks));
+    check(`fixture ${name} has forbiddenPhrasesInAnswer`, Array.isArray(parsed.expected.forbiddenPhrasesInAnswer));
+  }
 
   console.log(`\n=== Results: ${passed} passed, ${failed} failed ===\n`);
   return { passed, failed };

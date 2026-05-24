@@ -31,10 +31,8 @@ function resolveStatus(
   agent: AgentDef,
   traces: AgentTraceItem[] | null,
   currentPhase: string | null,
-  animProgress: number,
 ): AgentStatus {
   if (!traces) {
-    // Simulated progress during loading
     if (!currentPhase) return "pending";
     const phaseIdx = STAGE_ORDER.indexOf(currentPhase);
     const agentStageIdx = STAGE_ORDER.indexOf(agent.stage);
@@ -43,12 +41,21 @@ function resolveStatus(
     return "pending";
   }
 
-  // Real trace data after response
   const match = traces.find((t) => t.agentName.includes(agent.key) || agent.key.includes(t.agentName));
   if (!match) return "pending";
   if (match.status === "failed") return "failed";
   if (match.usedCachedInput) return "cached";
   return "completed";
+}
+
+function getInitialPhaseIndex(traces: AgentTraceItem[] | null | undefined): number {
+  if (!traces || traces.length === 0) return 0;
+  let completedIndex = -1;
+  for (const trace of traces) {
+    const stageIndex = trace.stage ? STAGE_ORDER.indexOf(trace.stage) : -1;
+    if (stageIndex > completedIndex) completedIndex = stageIndex;
+  }
+  return Math.min(completedIndex + 1, STAGE_ORDER.length - 1);
 }
 
 const statusDot: Record<AgentStatus, string> = {
@@ -131,15 +138,16 @@ export function AgentPipeline({ mode, traces, runningStages = [], animating, sho
   const [animPhase, setAnimPhase] = useState<number>(0);
 
   useEffect(() => {
-    if (!animating || traces) {
+    if (!animating) {
       setAnimPhase(0);
       return;
     }
 
+    const initialPhase = getInitialPhaseIndex(traces);
     const maxIdx = maxStage ? STAGE_ORDER.indexOf(maxStage) : STAGE_ORDER.length - 1;
 
-    setAnimPhase(0);
-    if (maxIdx <= 0) return; // single stage — no timer advance needed
+    setAnimPhase(initialPhase);
+    if (maxIdx <= initialPhase) return;
 
     const interval = setInterval(() => {
       setAnimPhase((prev) => {
@@ -155,7 +163,7 @@ export function AgentPipeline({ mode, traces, runningStages = [], animating, sho
     return () => clearInterval(interval);
   }, [animating, traces, maxStage]);
 
-  const currentPhase = animating && !traces ? STAGE_ORDER[animPhase] ?? null : null;
+  const currentPhase = animating ? STAGE_ORDER[animPhase] ?? null : null;
 
   const visibleAgents = showAll
     ? AGENT_DEFS
@@ -176,9 +184,15 @@ export function AgentPipeline({ mode, traces, runningStages = [], animating, sho
         const trace = traces?.find(
           (t) => t.agentName.includes(agent.key) || agent.key.includes(t.agentName),
         );
+        const simulatedStatus =
+          animating && !trace && currentPhase
+            ? resolveStatus(agent, null, currentPhase)
+            : null;
         const status = !trace && runningStages.includes(agent.stage)
           ? "running"
-          : resolveStatus(agent, traces ?? null, currentPhase, animPhase);
+          : simulatedStatus
+            ? simulatedStatus
+            : resolveStatus(agent, traces ?? null, currentPhase);
         return <AgentCard key={agent.key} agent={agent} status={status} trace={trace} />;
       })}
     </div>

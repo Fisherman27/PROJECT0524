@@ -2,8 +2,9 @@ import { callLLM } from "@/lib/ai/provider";
 import { parseAgentJson, ensureArray, ensureString } from "./json";
 import { DiffAgentOutput } from "./types";
 import { EvidenceCard, MaterialRecall, SentenceDiagnosis } from "@/types/replay";
+import { normalizeDiagnosisClaims } from "./quality-normalizers";
 
-function normalizeDiffOutput(raw: unknown): DiffAgentOutput {
+function normalizeDiffOutput(raw: unknown, evidenceCards: EvidenceCard[]): DiffAgentOutput {
   const obj = raw as Record<string, unknown>;
   return {
     answerRanking: ensureArray<Record<string, unknown>>(obj.answerRanking).map((r) => ({
@@ -18,6 +19,7 @@ function normalizeDiffOutput(raw: unknown): DiffAgentOutput {
       keepParts: ensureArray<string>(v.keepParts),
       avoidParts: ensureArray<string>(v.avoidParts),
     })),
+    versionClaims: normalizeDiagnosisClaims(obj.versionClaims, evidenceCards),
     sentenceDiagnosis: ensureArray<Record<string, unknown>>(obj.sentenceDiagnosis).map((d) => ({
       original: ensureString(d.original),
       diagnosis: ensureString(d.diagnosis),
@@ -52,7 +54,13 @@ ${answersText}
 1. 综合排名各版本（从导师视角）
 2. 分析每个版本的优点、问题、值得保留的部分、不建议使用的部分
 3. 对关键句子进行逐句诊断
-4. 仅输出JSON
+4. 每个版本至少判断：
+   - 是否增加了有效证据
+   - 是否引入了新的风险
+   - 是否更适合口述
+   - 是否更能承接追问
+5. 输出 versionClaims，绑定证据卡或信息缺口
+6. 仅输出JSON
 
 输出JSON结构：
 {
@@ -62,6 +70,9 @@ ${answersText}
   "versionReviews": [
     {"label": "A", "strengths": ["优点1"], "problems": ["问题1"], "keepParts": ["保留1"], "avoidParts": ["避免1"]}
   ],
+  "versionClaims": [
+    {"title": "结论标题", "detail": "比较结论", "evidenceRefs": [{"evidenceCardId": "card_1", "evidenceCardTitle": "标题", "reason": "引用原因"}], "missingInfo": [{"field": "缺失字段", "reason": "缺失原因", "howToSupplement": "如何补充"}], "confidence": "high|medium|low"}
+  ],
   "sentenceDiagnosis": [
     {"original": "原句", "diagnosis": "问题诊断", "suggestion": "改进建议"}
   ],
@@ -69,8 +80,8 @@ ${answersText}
 }`;
 
   const raw = await callLLM(
-    "你是一个保研面试多版本回答分析师。你从导师视角比较不同回答的优劣。仅输出JSON。",
+    "你是一个保研面试多版本回答分析师。你从导师视角比较不同回答的优劣，判断各版本是否增加有效证据、是否引入新风险、是否适合口述、是否能承接追问。仅输出JSON。",
     prompt
   );
-  return normalizeDiffOutput(parseAgentJson(raw));
+  return normalizeDiffOutput(parseAgentJson(raw), ctx.evidenceCards);
 }

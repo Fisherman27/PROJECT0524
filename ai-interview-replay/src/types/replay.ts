@@ -93,6 +93,25 @@ export type AnswerVerification = {
   revisedAnswer?: string;
 };
 
+export type AnswerMaturityLevel = "L1" | "L2" | "L3" | "L4" | "L5";
+
+export type AnswerMaturity = {
+  level: AnswerMaturityLevel;
+  label: string;
+  reason: string;
+  nextUpgrade: string;
+};
+
+export type QualitySummary = {
+  oneSentenceDiagnosis: string;
+  topRisk: string;
+  topMissingInfo: MissingInfoItem[];
+  evidenceRecallText: string;
+  answerSafety: "passed" | "needs_fix" | "not_checked";
+  maturity?: AnswerMaturity;
+  conflictNotes: string[];
+};
+
 export type MaterialRecall = {
   expectedCount: number;
   usedCount: number;
@@ -153,6 +172,7 @@ export type PreReplayReport = {
   calmAnswerImprovements: ReportBullet[];
   liveLossAnalysis: ReportBullet[];
   missingEvidence: ReportBullet[];
+  gapClaims: DiagnosisClaim[];
   evidenceClaims: DiagnosisClaim[];
   riskRadar: RiskRadarItem[];
   authenticityWarnings: AuthenticityWarning[];
@@ -161,6 +181,8 @@ export type PreReplayReport = {
   bestMergedAnswer: string;
   safeAnswer: SafeAnswerOutput;
   answerVerification: AnswerVerification;
+  qualitySummary: QualitySummary;
+  answerMaturity?: AnswerMaturity;
   rescueTemplate: string;
   nextPracticeAdvice: ReportBullet[];
   replayCard: ReplayCard;
@@ -184,6 +206,7 @@ export type PostReplayReport = {
     keepParts: string[];
     avoidParts: string[];
   }>;
+  versionClaims: DiagnosisClaim[];
   sentenceDiagnosis: SentenceDiagnosis[];
   vagueAndOverpackagingRisks: RiskItem[];
   riskRadar: RiskRadarItem[];
@@ -193,6 +216,8 @@ export type PostReplayReport = {
   bestMergedAnswer: string;
   safeAnswer: SafeAnswerOutput;
   answerVerification: AnswerVerification;
+  qualitySummary: QualitySummary;
+  answerMaturity?: AnswerMaturity;
   transferableFormula: string;
   nextInterviewChecklist: string[];
   replayCard: ReplayCard;

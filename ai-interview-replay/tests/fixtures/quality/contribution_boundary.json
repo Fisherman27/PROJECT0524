@@ -1,0 +1,12 @@
+{
+  "name": "contribution_boundary",
+  "backgroundMaterials": "大模型论文中译英 TeX 编辑器项目（校级优秀结题）：团队 4 人，我负责 Prompt 设计和前后端开发。另外我还参与过一个 NER 课程项目，使用 BiLSTM-CRF 实现中文命名实体识别，准确率达到 91%。",
+  "question": "你在这个项目中具体负责了什么？",
+  "liveAnswer": "我主要负责模型优化和算法改进，最后效果提升很明显。",
+  "calmAnswer": "我主要负责 Prompt 模板设计和前后端开发。团队其他成员负责数据集准备和用户测试。我自己做得比较深入的部分是针对 LaTeX 格式特殊字符的输出格式约束设计，以及不同学科（计算机、数学、物理）各自的术语表维护。",
+  "expected": {
+    "mustMentionEvidenceTitles": ["大模型论文中译英 TeX 编辑器"],
+    "mustDetectRisks": ["贡献不清", "边界损失", "过度包装"],
+    "forbiddenPhrasesInAnswer": ["模型优化", "算法改进", "主导"]
+  }
+}

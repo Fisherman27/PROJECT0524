@@ -146,7 +146,7 @@ export default function PostPage() {
           </div>
           <div className="w-56 flex-shrink-0">
             <div className="sticky top-20">
-              <AgentPipeline mode="post" animating />
+              <AgentPipeline mode="post" traces={getPreAnalysisTraces()} animating />
             </div>
           </div>
         </div>

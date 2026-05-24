@@ -1,11 +1,13 @@
 import {
   AgentTraceItem,
+  AnswerMaturity,
   AnswerVerification,
   DiagnosisClaim,
   EvidenceCard,
   PostReplayReport,
   PreReplayReport,
   ProfessorPressureTest,
+  QualitySummary,
   ReplayCard,
   ReportBullet,
   RiskItem,
@@ -62,6 +64,15 @@ function mdCard(c: ReplayCard): string {
   return `- **最大问题**：${c.biggestProblem}\n- **改进点**：${c.keyImprovement}\n- **回答公式**：${c.nextFormula}\n- **救场句**：${c.rescueSentence}\n- **下一题**：${c.nextQuestion}\n\n`;
 }
 
+function mdQualitySummary(s: QualitySummary, m?: AnswerMaturity): string {
+  const maturity = m ? `\n\n**当前可训练层级**：${m.level} ${m.label}\n\n${m.reason}\n\n> ${m.nextUpgrade}` : "";
+  const conflicts = s.conflictNotes.length > 0 ? `\n\n### 冲突说明\n\n${s.conflictNotes.map((n) => `- ${n}`).join("\n")}` : "";
+  const topMissing = s.topMissingInfo.length > 0
+    ? `\n\n### 信息缺口\n\n${s.topMissingInfo.map((m) => `- **${m.field}**：${m.reason}（补充方式：${m.howToSupplement}）`).join("\n")}`
+    : "";
+  return `**一句话诊断**：${s.oneSentenceDiagnosis}\n\n- 材料召回：${s.evidenceRecallText}\n- 安全校验：${s.answerSafety === "passed" ? "通过" : s.answerSafety === "needs_fix" ? "已修正" : "未检查"}\n- 最大风险：${s.topRisk}${maturity}${topMissing}${conflicts}\n\n`;
+}
+
 function mdTrace(items: AgentTraceItem[]): string {
   if (items.length === 0) return "_无_\n\n";
   return items.map((t) => `- ${t.status === "success" ? "OK" : "FAIL"} ${t.agentName}（${t.durationMs != null ? Math.round(t.durationMs / 1000) + "s" : "?"}）: ${t.summary}`).join("\n") + "\n\n";
@@ -72,39 +83,43 @@ export function formatPreMarkdown(report: PreReplayReport): string {
 
 ---
 
-## 一、问题真实意图
+## 质量摘要
+${mdQualitySummary(report.qualitySummary, report.answerMaturity)}
+## 一、安全融合回答
+${mdSafeAnswer(report.safeAnswer)}
+## 二、问题真实意图
 ${report.questionIntent || "_未分析_"}
 
-## 二、材料证据库
+## 三、材料证据库
 ${mdCards(report.evidenceCards)}
-## 三、材料召回率
+## 四、材料召回率
 应使用 ${report.materialRecall?.expectedCount ?? 0} 项 / 实际使用 ${report.materialRecall?.usedCount ?? 0} 项
 ${report.materialRecall?.recallSummary || ""}
 
-## 四、证据依据
+## 五、证据依据
 ${mdClaims(report.evidenceClaims)}
-## 五、临场回答诊断
+## 六、临场差距诊断
+${mdClaims(report.gapClaims)}
+## 七、临场回答诊断
 ${mdBullets(report.liveAnswerDiagnosis)}
-## 六、临场损失分析
+## 八、临场损失分析
 ${mdBullets(report.liveLossAnalysis)}
-## 七、风险雷达
+## 九、风险雷达
 ${mdRadar(report.riskRadar)}
-## 八、真实性风险
+## 十、真实性风险
 ${report.authenticityWarnings.map((w) => `- **${w.riskType}**：~~${w.expression}~~ -> ${w.saferAlternative}\n  - ${w.reason}`).join("\n\n") + "\n\n" || "_无_\n\n"}
-## 九、导师追问风险
+## 十一、导师追问风险
 ${mdRisks(report.followUpRisks)}
-## 十、导师压力测试
+## 十二、导师压力测试
 ${mdPressureTests(report.pressureTests)}
-## 十一、安全融合回答
-${mdSafeAnswer(report.safeAnswer)}
-## 十二、回答安全校验
+## 十三、回答安全校验
 ${mdVerification(report.answerVerification)}
-## 十三、下次救场模板
+## 十四、下次救场模板
 ${report.rescueTemplate || "_未生成_"}
 
-## 十四、复盘卡片
+## 十五、复盘卡片
 ${mdCard(report.replayCard)}
-## 十五、多角色诊断链
+## 十六、多角色诊断链
 ${mdTrace(report.agentTrace)}
 ---
 
@@ -127,44 +142,48 @@ export function formatPostMarkdown(report: PostReplayReport): string {
 
 ---
 
-## 一、问题真实意图
+## 质量摘要
+${mdQualitySummary(report.qualitySummary, report.answerMaturity)}
+## 一、安全融合回答
+${mdSafeAnswer(report.safeAnswer)}
+## 二、问题真实意图
 ${report.questionIntent || "_未分析_"}
 
-## 二、材料证据库
+## 三、材料证据库
 ${mdCards(report.evidenceCards)}
-## 三、材料召回率
+## 四、材料召回率
 应使用 ${report.materialRecall?.expectedCount ?? 0} 项 / 实际使用 ${report.materialRecall?.usedCount ?? 0} 项
 ${report.materialRecall?.recallSummary || ""}
 
-## 四、证据依据
+## 五、证据依据
 ${mdClaims(report.evidenceClaims)}
-## 五、回答综合排名
+## 六、版本差异诊断
+${mdClaims(report.versionClaims)}
+## 七、回答综合排名
 ${ranking}
 
-## 六、各版本优缺点
+## 八、各版本优缺点
 ${reviews}
 
-## 七、逐句诊断
+## 九、逐句诊断
 ${diagnoses ? `| 原句 | 诊断 | 建议 |\n|------|------|------|\n${diagnoses}\n` : "_暂无逐句诊断_\n"}
 
-## 八、风险雷达
+## 十、风险雷达
 ${mdRadar(report.riskRadar)}
-## 九、真实性风险
+## 十一、真实性风险
 ${report.authenticityWarnings.map((w) => `- **${w.riskType}**：~~${w.expression}~~ -> ${w.saferAlternative}`).join("\n\n") + "\n\n" || "_无_\n\n"}
-## 十、导师可能追问
+## 十二、导师可能追问
 ${mdRisks(report.followUpRisks)}
-## 十一、导师压力测试
+## 十三、导师压力测试
 ${mdPressureTests(report.pressureTests)}
-## 十二、安全融合回答
-${mdSafeAnswer(report.safeAnswer)}
-## 十三、回答安全校验
+## 十四、回答安全校验
 ${mdVerification(report.answerVerification)}
-## 十四、可迁移回答公式
+## 十五、可迁移回答公式
 ${report.transferableFormula || "_未生成_"}
 
-## 十五、复盘卡片
+## 十六、复盘卡片
 ${mdCard(report.replayCard)}
-## 十六、多角色诊断链
+## 十七、多角色诊断链
 ${mdTrace(report.agentTrace)}
 ---
 

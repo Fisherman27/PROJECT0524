@@ -1,0 +1,12 @@
+{
+  "name": "motivation",
+  "backgroundMaterials": "大模型论文中译英 TeX 编辑器项目：负责 Prompt 设计、前后端开发和翻译质量优化。掌握了 React、Node.js、Docker、CI/CD。",
+  "question": "你为什么选择这个研究方向？",
+  "liveAnswer": "我对人工智能比较感兴趣，也觉得大模型发展很快，所以希望继续学习。",
+  "calmAnswer": "我之前做过一个大模型辅助论文中译英 TeX 编辑器，在项目中发现大模型虽然生成能力强，但在科研写作场景中容易出现术语不一致、格式破坏和上下文不稳定的问题。因此我希望研究生阶段能进一步学习大模型在科研辅助场景中的可靠性和可控性问题。",
+  "expected": {
+    "mustMentionEvidenceTitles": ["大模型论文中译英 TeX 编辑器"],
+    "mustDetectRisks": ["证据不足", "空泛表达"],
+    "forbiddenPhrasesInAnswer": ["显著提升", "深入研究"]
+  }
+}

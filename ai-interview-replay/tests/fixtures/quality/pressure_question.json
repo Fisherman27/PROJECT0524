@@ -1,0 +1,12 @@
+{
+  "name": "pressure_question",
+  "backgroundMaterials": "大模型论文中译英 TeX 编辑器项目：负责 Prompt 设计、前后端开发。掌握了 React、Node.js。另有一篇关于 Prompt Engineering 的课程论文（未发表）。没有深度学习模型训练经验。",
+  "question": "你这个项目有什么创新？",
+  "liveAnswer": "我们创新性地将大模型应用于科研写作场景，相比传统工具显著提升了翻译质量和效率，达到了国际先进水平。",
+  "calmAnswer": "坦率地说，这个项目在学术意义上创新性有限，更多是应用探索。我们主要做的是把大模型 API 应用在一个特定科研写作场景，解决了 LaTeX 格式兼容和术语一致性问题。如果继续深入，我认为值得探索的方向是大模型在科研写作中如何做到更可控的术语管理和格式保持。",
+  "expected": {
+    "mustMentionEvidenceTitles": ["大模型论文中译英 TeX 编辑器"],
+    "mustDetectRisks": ["过度包装", "真实性风险", "贡献夸大"],
+    "forbiddenPhrasesInAnswer": ["显著提升", "国际先进", "深入研究", "创新性"]
+  }
+}

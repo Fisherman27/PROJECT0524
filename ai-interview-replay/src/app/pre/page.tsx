@@ -148,7 +148,7 @@ export default function PrePage() {
           </div>
           <div className="w-56 flex-shrink-0">
             <div className="sticky top-20">
-              <AgentPipeline mode="pre" animating />
+              <AgentPipeline mode="pre" traces={getPreAnalysisTraces()} animating />
             </div>
           </div>
         </div>
