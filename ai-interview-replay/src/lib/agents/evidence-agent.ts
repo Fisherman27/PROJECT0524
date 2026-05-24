@@ -2,8 +2,9 @@ import { callLLM } from "@/lib/ai/provider";
 import { parseAgentJson, ensureArray, ensureString } from "./json";
 import { EvidenceAgentOutput } from "./types";
 import { EvidenceCard, MaterialRecall, ReportBullet, ExpectedEvidenceItem } from "@/types/replay";
+import { normalizeDiagnosisClaims } from "./quality-normalizers";
 
-function normalizeEvidenceOutput(raw: unknown): EvidenceAgentOutput {
+function normalizeEvidenceOutput(raw: unknown, evidenceCards: EvidenceCard[]): EvidenceAgentOutput {
   const obj = raw as Record<string, unknown>;
   const mr = (obj.materialRecall || {}) as Record<string, unknown>;
   return {
@@ -19,6 +20,7 @@ function normalizeEvidenceOutput(raw: unknown): EvidenceAgentOutput {
       title: (b as Record<string, unknown>).title ? ensureString((b as Record<string, unknown>).title) : "",
       detail: ensureString((b as Record<string, unknown>).detail),
     })),
+    evidenceClaims: normalizeDiagnosisClaims(obj.evidenceClaims, evidenceCards),
     summary: ensureString(obj.summary),
   };
 }
@@ -31,12 +33,12 @@ export async function runEvidenceAgent(ctx: {
   expectedEvidence?: ExpectedEvidenceItem[];
 }): Promise<EvidenceAgentOutput> {
   const cardsText = ctx.evidenceCards
-    .map((c, i) => `${i + 1}. ${c.title}（${c.type}）: ${c.content} - 适合支撑: ${c.supportedQuestions.join("、")}`)
+    .map((c) => `${c.id}. ${c.title}（${c.type}）: ${c.content} - 适合支撑: ${c.supportedQuestions.join("、")}`)
     .join("\n");
 
   const expectedText = ctx.expectedEvidence?.length
     ? ctx.expectedEvidence
-        .map((e, i) => `${i + 1}. ${e.evidenceCardTitle}（优先级: ${e.priority}）: ${e.reason} - 建议用法: ${e.suggestedUse}`)
+        .map((e, i) => `${i + 1}. ${e.evidenceCardId} ${e.evidenceCardTitle}（优先级: ${e.priority}）: ${e.reason} - 建议用法: ${e.suggestedUse}`)
         .join("\n")
     : "";
 
@@ -64,7 +66,9 @@ ${ctx.answersText}
 3. 计算材料召回率：usedCount / expectedCount
 4. 分析遗漏了什么关键支撑内容
 5. 给出改进方向
-6. 仅输出JSON
+6. 输出 evidenceClaims，每条关键诊断都要尽量绑定 evidenceRefs；如果材料不足，则写 missingInfo
+7. confidence 只能是 high / medium / low
+8. 仅输出JSON
 
 输出JSON结构：
 {
@@ -79,6 +83,24 @@ ${ctx.answersText}
   "missingEvidence": [
     {"title": "遗漏的材料名称", "detail": "为什么应该使用它"}
   ],
+  "evidenceClaims": [
+    {
+      "title": "诊断结论",
+      "detail": "具体说明",
+      "evidenceRefs": [
+        {
+          "evidenceCardId": "card_1",
+          "evidenceCardTitle": "证据卡标题",
+          "quote": "可选短引用",
+          "reason": "为什么引用这张证据卡"
+        }
+      ],
+      "missingInfo": [
+        {"field": "缺少的信息", "reason": "为什么影响判断", "howToSupplement": "如何补充"}
+      ],
+      "confidence": "high | medium | low"
+    }
+  ],
   "summary": "一句话总结"
 }`;
 
@@ -86,5 +108,5 @@ ${ctx.answersText}
     "你是一个保研面试材料证据匹配师。你判断用户的回答是否充分利用了个人背景材料。仅输出JSON。",
     prompt
   );
-  return normalizeEvidenceOutput(parseAgentJson(raw));
+  return normalizeEvidenceOutput(parseAgentJson(raw), ctx.evidenceCards);
 }

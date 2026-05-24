@@ -13,10 +13,12 @@ import { runProfessorAgent } from "./professor-agent";
 import { runGapAgent } from "./gap-agent";
 import { runDiffAgent } from "./diff-agent";
 import { runSynthesizerAgent } from "./synthesizer-agent";
+import { runVerifierAgent } from "./verifier-agent";
 import { runTrainingAgent } from "./training-agent";
 import { composePreReport, composePostReport } from "./composer";
 import { makeMaterialFingerprint, makeQuestionFingerprint } from "./fingerprint";
-import { MaterialAgentOutput, IntentAgentOutput, ProfessorAgentOutput, GapAgentOutput, DiffAgentOutput } from "./types";
+import { MaterialAgentOutput, IntentAgentOutput, ProfessorAgentOutput, GapAgentOutput, DiffAgentOutput, VerifierAgentOutput } from "./types";
+import { EMPTY_VERIFICATION } from "./quality-normalizers";
 
 function trace(agentName: string, summary: string, startMs: number, overrides?: Partial<AgentTraceItem>): AgentTraceItem {
   return {
@@ -48,7 +50,8 @@ async function resolveMaterialAnalysis(req: {
     req.materialAnalysis.evidenceCards?.length > 0
   ) {
     const ma = req.materialAnalysis;
-    const validatedCards: EvidenceCard[] = ma.evidenceCards.map((c) => ({
+    const validatedCards: EvidenceCard[] = ma.evidenceCards.map((c, index) => ({
+      id: c.id || `card_${index + 1}`,
       title: c.title || "未命名",
       type: c.type || "other",
       content: c.content || "",
@@ -57,6 +60,7 @@ async function resolveMaterialAnalysis(req: {
       possibleFollowUps: Array.isArray(c.possibleFollowUps) ? c.possibleFollowUps : [],
       usageRisk: typeof c.usageRisk === "string" ? c.usageRisk : "",
       suggestedExpression: typeof c.suggestedExpression === "string" ? c.suggestedExpression : "",
+      missingInfo: Array.isArray(c.missingInfo) ? c.missingInfo : [],
     }));
 
     return {
@@ -114,10 +118,12 @@ async function resolveQuestionPlan(req: {
       expectedEvidence: Array.isArray(qp.expectedEvidence)
         ? qp.expectedEvidence.map((e) => ({
             title: e.title || "",
+            evidenceCardId: e.evidenceCardId || "",
             evidenceCardTitle: e.evidenceCardTitle || "",
             reason: e.reason || "",
             priority: e.priority || "medium",
             suggestedUse: e.suggestedUse || "",
+            missingInfo: Array.isArray(e.missingInfo) ? e.missingInfo : [],
           }))
         : [],
       summary: qp.summary || "",
@@ -237,7 +243,7 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
 
   // Phase 4: Professor + Gap in parallel with per-agent fallback
   const tParallel = Date.now();
-  let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], summary: "" };
+  let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], pressureTests: [], summary: "" };
   let gap: GapAgentOutput = { liveAnswerDiagnosis: [], calmAnswerImprovements: [], liveLossAnalysis: [], summary: "" };
 
   const [pResult, gResult] = await Promise.allSettled([
@@ -280,10 +286,33 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
+    pressureTests: professor.pressureTests,
+    evidenceClaims: evidence.evidenceClaims,
+    expectedEvidence: questionPlan.expectedEvidence,
   });
   traces.push(trace("回答融合重构器", synthesizer.summary, tSynth, { stage: "synthesis" }));
 
-  // Phase 6: Training Planner
+  // Phase 6: Verifier
+  const tVerify = Date.now();
+  let verifier: VerifierAgentOutput = { verification: EMPTY_VERIFICATION, summary: "安全校验未运行" };
+  try {
+    verifier = await runVerifierAgent({
+      question: req.question,
+      answer: synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer,
+      evidenceCards: material.evidenceCards,
+      pressureTests: professor.pressureTests,
+      authenticityWarnings: professor.authenticityWarnings,
+      questionIntent: questionPlan.questionIntent,
+    });
+    traces.push(trace("回答安全校验员", verifier.summary, tVerify, { stage: "synthesis" }));
+  } catch {
+    verifier = { verification: { ...EMPTY_VERIFICATION, summary: "安全校验暂不可用。" }, summary: "安全校验失败" };
+    traces.push({ agentName: "回答安全校验员", agentVersion: "v1", stage: "synthesis", summary: "校验失败，已保留融合回答", status: "failed", errorCode: "verifier_failed" });
+  }
+
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
+
+  // Phase 7: Training Planner
   const tTrain = Date.now();
   const training = await runTrainingAgent({
     mode: "pre",
@@ -292,7 +321,7 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
-    bestMergedAnswer: synthesizer.bestMergedAnswer,
+    bestMergedAnswer: finalAnswer,
   });
   traces.push(trace("训练规划器", training.summary, tTrain, { stage: "training" }));
 
@@ -304,7 +333,7 @@ export async function runPreReplayAgents(req: PreReplayRequest): Promise<PreRepl
     summary: questionPlan.summary,
   };
 
-  return composePreReport(material, intentOutput, evidence, professor, gap, synthesizer, training, traces);
+  return composePreReport(material, intentOutput, evidence, professor, gap, synthesizer, verifier, training, traces);
 }
 
 export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostReplayReport> {
@@ -353,7 +382,7 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
 
   // Phase 4: Professor + Diff in parallel with per-agent fallback
   const tParallel = Date.now();
-  let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], summary: "" };
+  let professor: ProfessorAgentOutput = { riskRadar: [], followUpRisks: [], authenticityWarnings: [], pressureTests: [], summary: "" };
   let diff: DiffAgentOutput = { answerRanking: [], versionReviews: [], sentenceDiagnosis: [], summary: "" };
 
   const [pResult, dResult] = await Promise.allSettled([
@@ -395,10 +424,33 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
+    pressureTests: professor.pressureTests,
+    evidenceClaims: evidence.evidenceClaims,
+    expectedEvidence: questionPlan.expectedEvidence,
   });
   traces.push(trace("回答融合重构器", synthesizer.summary, tSynth, { stage: "synthesis" }));
 
-  // Phase 6: Training Planner
+  // Phase 6: Verifier
+  const tVerify = Date.now();
+  let verifier: VerifierAgentOutput = { verification: EMPTY_VERIFICATION, summary: "安全校验未运行" };
+  try {
+    verifier = await runVerifierAgent({
+      question: req.question,
+      answer: synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer,
+      evidenceCards: material.evidenceCards,
+      pressureTests: professor.pressureTests,
+      authenticityWarnings: professor.authenticityWarnings,
+      questionIntent: questionPlan.questionIntent,
+    });
+    traces.push(trace("回答安全校验员", verifier.summary, tVerify, { stage: "synthesis" }));
+  } catch {
+    verifier = { verification: { ...EMPTY_VERIFICATION, summary: "安全校验暂不可用。" }, summary: "安全校验失败" };
+    traces.push({ agentName: "回答安全校验员", agentVersion: "v1", stage: "synthesis", summary: "校验失败，已保留融合回答", status: "failed", errorCode: "verifier_failed" });
+  }
+
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
+
+  // Phase 7: Training Planner
   const tTrain = Date.now();
   const training = await runTrainingAgent({
     mode: "post",
@@ -407,7 +459,7 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
     materialRecall: evidence.materialRecall,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
-    bestMergedAnswer: synthesizer.bestMergedAnswer,
+    bestMergedAnswer: finalAnswer,
   });
   traces.push(trace("训练规划器", training.summary, tTrain, { stage: "training" }));
 
@@ -419,5 +471,5 @@ export async function runPostReplayAgents(req: PostReplayRequest): Promise<PostR
     summary: questionPlan.summary,
   };
 
-  return composePostReport(material, intentOutput, evidence, professor, diff, synthesizer, training, traces);
+  return composePostReport(material, intentOutput, evidence, professor, diff, synthesizer, verifier, training, traces);
 }

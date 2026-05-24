@@ -10,6 +10,10 @@ import { RiskRadarPanel } from "@/components/risk-radar-panel";
 import { AuthenticityWarningList } from "@/components/authenticity-warning-list";
 import { ReplayCardPanel } from "@/components/replay-card-panel";
 import { AgentTracePanel } from "@/components/agent-trace-panel";
+import { EvidenceClaimList } from "@/components/evidence-claim-list";
+import { ProfessorPressureTestList } from "@/components/professor-pressure-test-list";
+import { SafeAnswerPanel } from "@/components/safe-answer-panel";
+import { AnswerVerificationPanel } from "@/components/answer-verification-panel";
 import { formatPreMarkdown } from "@/lib/markdown-export";
 import { safeFilename } from "@/lib/filename";
 
@@ -67,6 +71,8 @@ export function PreReplayResult({ report, copyText }: PreReplayResultProps) {
 
       <ReportSection title="材料召回率" icon=""><MaterialRecallPanel recall={report.materialRecall} /></ReportSection>
 
+      <ReportSection title="证据依据" icon=""><EvidenceClaimList claims={report.evidenceClaims} /></ReportSection>
+
       <ReportSection title="临场回答诊断" icon=""><BulletList items={report.liveAnswerDiagnosis} type="diagnosis" /></ReportSection>
 
       <ReportSection title="临场损失分析" icon=""><BulletList items={report.liveLossAnalysis} type="diagnosis" /></ReportSection>
@@ -77,9 +83,11 @@ export function PreReplayResult({ report, copyText }: PreReplayResultProps) {
 
       <ReportSection title="导师追问风险" icon=""><RiskList items={report.followUpRisks} /></ReportSection>
 
-      <ReportSection title="最佳融合回答" icon="">
-        {report.bestMergedAnswer && <div className="rounded-lg bg-blue-50 p-4 text-sm leading-relaxed text-gray-800 whitespace-pre-wrap">{report.bestMergedAnswer}</div>}
-      </ReportSection>
+      <ReportSection title="导师压力测试" icon=""><ProfessorPressureTestList tests={report.pressureTests} /></ReportSection>
+
+      <ReportSection title="安全融合回答" icon=""><SafeAnswerPanel answer={report.safeAnswer} /></ReportSection>
+
+      <ReportSection title="回答安全校验" icon=""><AnswerVerificationPanel verification={report.answerVerification} /></ReportSection>
 
       <ReportSection title="下次救场模板" icon="">
         {report.rescueTemplate && <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">{report.rescueTemplate}</div>}

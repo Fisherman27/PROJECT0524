@@ -7,6 +7,10 @@ import {
   ReplayCard,
   ReportBullet,
   SentenceDiagnosis,
+  DiagnosisClaim,
+  ProfessorPressureTest,
+  SafeAnswerOutput,
+  AnswerVerification,
 } from "@/types/replay";
 
 // Agent input/output context shared between agents
@@ -34,6 +38,7 @@ export type IntentAgentOutput = {
 export type EvidenceAgentOutput = {
   materialRecall: MaterialRecall;
   missingEvidence: ReportBullet[];
+  evidenceClaims: DiagnosisClaim[];
   summary: string;
 };
 
@@ -41,6 +46,7 @@ export type ProfessorAgentOutput = {
   riskRadar: RiskRadarItem[];
   followUpRisks: RiskItem[];
   authenticityWarnings: AuthenticityWarning[];
+  pressureTests: ProfessorPressureTest[];
   summary: string;
 };
 
@@ -66,6 +72,12 @@ export type DiffAgentOutput = {
 
 export type SynthesizerAgentOutput = {
   bestMergedAnswer: string;
+  safeAnswer: SafeAnswerOutput;
+  summary: string;
+};
+
+export type VerifierAgentOutput = {
+  verification: AnswerVerification;
   summary: string;
 };
 

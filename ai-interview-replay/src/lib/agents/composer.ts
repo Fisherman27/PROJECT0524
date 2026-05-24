@@ -7,6 +7,7 @@ import {
   GapAgentOutput,
   DiffAgentOutput,
   SynthesizerAgentOutput,
+  VerifierAgentOutput,
   TrainingAgentOutput,
 } from "./types";
 
@@ -17,9 +18,11 @@ export function composePreReport(
   professor: ProfessorAgentOutput,
   gap: GapAgentOutput,
   synthesizer: SynthesizerAgentOutput,
+  verifier: VerifierAgentOutput,
   training: TrainingAgentOutput,
   agentTrace: AgentTraceItem[]
 ): PreReplayReport {
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
   return {
     questionIntent: intent.questionIntent,
     evidenceCards: material.evidenceCards,
@@ -28,10 +31,17 @@ export function composePreReport(
     calmAnswerImprovements: gap.calmAnswerImprovements,
     liveLossAnalysis: gap.liveLossAnalysis,
     missingEvidence: evidence.missingEvidence,
+    evidenceClaims: evidence.evidenceClaims,
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
     followUpRisks: professor.followUpRisks,
-    bestMergedAnswer: synthesizer.bestMergedAnswer,
+    pressureTests: professor.pressureTests,
+    bestMergedAnswer: finalAnswer,
+    safeAnswer: {
+      ...synthesizer.safeAnswer,
+      answer60s: finalAnswer,
+    },
+    answerVerification: verifier.verification,
     rescueTemplate: training.rescueTemplate || "",
     nextPracticeAdvice: training.nextPracticeAdvice || [],
     replayCard: training.replayCard,
@@ -46,13 +56,16 @@ export function composePostReport(
   professor: ProfessorAgentOutput,
   diff: DiffAgentOutput,
   synthesizer: SynthesizerAgentOutput,
+  verifier: VerifierAgentOutput,
   training: TrainingAgentOutput,
   agentTrace: AgentTraceItem[]
 ): PostReplayReport {
+  const finalAnswer = verifier.verification.revisedAnswer || synthesizer.safeAnswer.answer60s || synthesizer.bestMergedAnswer;
   return {
     questionIntent: intent.questionIntent,
     evidenceCards: material.evidenceCards,
     materialRecall: evidence.materialRecall,
+    evidenceClaims: evidence.evidenceClaims,
     answerRanking: diff.answerRanking,
     versionReviews: diff.versionReviews,
     sentenceDiagnosis: diff.sentenceDiagnosis,
@@ -64,7 +77,13 @@ export function composePostReport(
     riskRadar: professor.riskRadar,
     authenticityWarnings: professor.authenticityWarnings,
     followUpRisks: professor.followUpRisks,
-    bestMergedAnswer: synthesizer.bestMergedAnswer,
+    pressureTests: professor.pressureTests,
+    bestMergedAnswer: finalAnswer,
+    safeAnswer: {
+      ...synthesizer.safeAnswer,
+      answer60s: finalAnswer,
+    },
+    answerVerification: verifier.verification,
     transferableFormula: training.transferableFormula || "",
     nextInterviewChecklist: training.nextInterviewChecklist || [],
     replayCard: training.replayCard,

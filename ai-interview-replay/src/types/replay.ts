@@ -18,6 +18,7 @@ export type SentenceDiagnosis = {
 // ---- Multi-Agent upgrade types ----
 
 export type EvidenceCard = {
+  id: string;
   title: string;
   type: "project" | "research" | "course" | "competition" | "statement" | "other";
   content: string;
@@ -26,6 +27,70 @@ export type EvidenceCard = {
   possibleFollowUps: string[];
   usageRisk: string;
   suggestedExpression: string;
+  missingInfo?: string[];
+};
+
+export type EvidenceReference = {
+  evidenceCardId: string;
+  evidenceCardTitle: string;
+  quote?: string;
+  reason: string;
+};
+
+export type MissingInfoItem = {
+  field: string;
+  reason: string;
+  howToSupplement: string;
+};
+
+export type DiagnosisClaim = {
+  title: string;
+  detail: string;
+  evidenceRefs: EvidenceReference[];
+  missingInfo: MissingInfoItem[];
+  confidence: "high" | "medium" | "low";
+};
+
+export type ProfessorPressureTest = {
+  riskyExpression: string;
+  likelyQuestion: string;
+  dangerReason: string;
+  currentSupportLevel: "strong" | "medium" | "weak";
+  safeResponse: string;
+  missingInfo: MissingInfoItem[];
+  evidenceRefs: EvidenceReference[];
+};
+
+export type SafeAnswerOutput = {
+  answer30s: string;
+  answer60s: string;
+  naturalVersion?: string;
+  researchVersion?: string;
+  usedEvidence: EvidenceReference[];
+  riskControls: string[];
+};
+
+export type AnswerVerificationIssue = {
+  issueType:
+    | "unsupported_claim"
+    | "overclaim"
+    | "unclear_contribution"
+    | "unanswerable_term"
+    | "off_topic"
+    | "not_oral_friendly"
+    | "new_followup_risk";
+  originalText: string;
+  reason: string;
+  suggestedFix: string;
+  severity: "high" | "medium" | "low";
+  evidenceRefs: EvidenceReference[];
+};
+
+export type AnswerVerification = {
+  passed: boolean;
+  summary: string;
+  issues: AnswerVerificationIssue[];
+  revisedAnswer?: string;
 };
 
 export type MaterialRecall = {
@@ -88,10 +153,14 @@ export type PreReplayReport = {
   calmAnswerImprovements: ReportBullet[];
   liveLossAnalysis: ReportBullet[];
   missingEvidence: ReportBullet[];
+  evidenceClaims: DiagnosisClaim[];
   riskRadar: RiskRadarItem[];
   authenticityWarnings: AuthenticityWarning[];
   followUpRisks: RiskItem[];
+  pressureTests: ProfessorPressureTest[];
   bestMergedAnswer: string;
+  safeAnswer: SafeAnswerOutput;
+  answerVerification: AnswerVerification;
   rescueTemplate: string;
   nextPracticeAdvice: ReportBullet[];
   replayCard: ReplayCard;
@@ -102,6 +171,7 @@ export type PostReplayReport = {
   questionIntent: string;
   evidenceCards: EvidenceCard[];
   materialRecall: MaterialRecall;
+  evidenceClaims: DiagnosisClaim[];
   answerRanking: Array<{
     label: string;
     rank: number;
@@ -119,7 +189,10 @@ export type PostReplayReport = {
   riskRadar: RiskRadarItem[];
   authenticityWarnings: AuthenticityWarning[];
   followUpRisks: RiskItem[];
+  pressureTests: ProfessorPressureTest[];
   bestMergedAnswer: string;
+  safeAnswer: SafeAnswerOutput;
+  answerVerification: AnswerVerification;
   transferableFormula: string;
   nextInterviewChecklist: string[];
   replayCard: ReplayCard;
@@ -132,10 +205,12 @@ export type PostReplayReport = {
 
 export type ExpectedEvidenceItem = {
   title: string;
+  evidenceCardId: string;
   evidenceCardTitle: string;
   reason: string;
   priority: "high" | "medium" | "low";
   suggestedUse: string;
+  missingInfo?: MissingInfoItem[];
 };
 
 export type MaterialPreAnalysis = {

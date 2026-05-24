@@ -4,6 +4,7 @@
 import { validatePreRequest, validatePostRequest, validateQuestionsRequest } from "../src/lib/schemas.ts";
 import { normalizePreReport, normalizePostReport, sanitizeJsonBlock } from "../src/lib/ai/report-normalizer.ts";
 import { formatPreCopyText, formatPostCopyText } from "../src/lib/copy-format.ts";
+import { formatPreMarkdown, formatPostMarkdown } from "../src/lib/markdown-export.ts";
 import { buildPrePrompt, buildPostPrompt, buildQuestionsPrompt } from "../src/lib/ai/prompts.ts";
 import { makeMaterialFingerprint, makeQuestionFingerprint, createInputFingerprint } from "../src/lib/agents/fingerprint.ts";
 
@@ -61,7 +62,11 @@ export async function testAll() {
     liveLossAnalysis: [{ title: "证据损失", detail: "遗漏了项目" }],
     missingEvidence: [{ title: "项目经历", detail: "应提到翻译工具" }],
     followUpRisks: [{ risk: "追问项目细节", reason: "提到了项目", suggestedPreparation: "准备细节" }],
+    evidenceClaims: [{ title: "回答缺少项目证据", detail: "临场回答没有调用项目经历", evidenceRefs: [], missingInfo: [], confidence: "high" }],
+    pressureTests: [{ riskyExpression: "模型优化", likelyQuestion: "你优化的是参数还是Prompt？", dangerReason: "容易夸大贡献", currentSupportLevel: "medium", safeResponse: "我主要做Prompt和流程优化", missingInfo: [], evidenceRefs: [] }],
     bestMergedAnswer: "融合后的最佳回答文本",
+    safeAnswer: { answer30s: "30秒安全回答", answer60s: "60秒安全回答", usedEvidence: [], riskControls: ["避免夸大"] },
+    answerVerification: { passed: true, summary: "通过校验", issues: [] },
     rescueTemplate: "下次可以这样说：我的兴趣来自___",
     nextPracticeAdvice: [{ title: "证据训练", detail: "练习用经历支撑观点" }],
   });
@@ -72,6 +77,10 @@ export async function testAll() {
   check("risks count correct", preReport.followUpRisks.length === 1);
   check("bestMergedAnswer present", !!preReport.bestMergedAnswer);
   check("rescueTemplate present", !!preReport.rescueTemplate);
+  check("pre evidenceClaims present", preReport.evidenceClaims.length === 1);
+  check("pre pressureTests present", preReport.pressureTests.length === 1);
+  check("pre safeAnswer present", !!preReport.safeAnswer.answer60s);
+  check("pre verification present", typeof preReport.answerVerification.passed === "boolean");
 
   try { normalizePreReport("bad json!!!"); check("normalizePreReport rejects invalid", false); }
   catch { check("normalizePreReport rejects invalid JSON", true); }
@@ -83,7 +92,11 @@ export async function testAll() {
     sentenceDiagnosis: [{ original: "感兴趣", diagnosis: "空泛", suggestion: "加经历" }],
     vagueAndOverpackagingRisks: [{ risk: "x", reason: "y", suggestedPreparation: "z" }],
     followUpRisks: [{ risk: "x", reason: "y", suggestedPreparation: "z" }],
+    evidenceClaims: [{ title: "版本B证据更充分", detail: "版本B提到项目经历", evidenceRefs: [], missingInfo: [], confidence: "medium" }],
+    pressureTests: [{ riskyExpression: "深入研究", likelyQuestion: "读过哪些论文？", dangerReason: "材料不足", currentSupportLevel: "weak", safeResponse: "初步接触相关问题", missingInfo: [], evidenceRefs: [] }],
     bestMergedAnswer: "融合回答",
+    safeAnswer: { answer30s: "30秒", answer60s: "60秒", usedEvidence: [], riskControls: ["降低包装"] },
+    answerVerification: { passed: false, summary: "需要修改", issues: [] },
     transferableFormula: "1.经历→2.问题→3.方向",
     nextInterviewChecklist: ["准备1", "准备2"],
   });
@@ -94,6 +107,10 @@ export async function testAll() {
   check("bestMergedAnswer present", !!postReport.bestMergedAnswer);
   check("transferableFormula present", !!postReport.transferableFormula);
   check("checklist has 2 items", postReport.nextInterviewChecklist.length === 2);
+  check("post evidenceClaims present", postReport.evidenceClaims.length === 1);
+  check("post pressureTests present", postReport.pressureTests.length === 1);
+  check("post safeAnswer present", !!postReport.safeAnswer.answer60s);
+  check("post verification present", typeof postReport.answerVerification.passed === "boolean");
 
   console.log("\n=== Unit Tests: JSON Sanitizer ===\n");
 
@@ -108,11 +125,18 @@ export async function testAll() {
 
   const copyText = formatPreCopyText(preReport);
   check("formatPreCopyText produces text", copyText.length > 100);
-  check("contains module titles", copyText.includes("问题真实意图") && copyText.includes("最佳融合回答"));
+  check("contains module titles", copyText.includes("问题真实意图") && copyText.includes("安全融合回答"));
+  check("pre copy contains quality sections", copyText.includes("导师压力测试") && copyText.includes("回答安全校验"));
 
   const postCopy = formatPostCopyText(postReport);
   check("formatPostCopyText produces text", postCopy.length > 100);
   check("contains module titles", postCopy.includes("回答综合排名") && postCopy.includes("可迁移回答公式"));
+  check("post copy contains quality sections", postCopy.includes("证据依据") && postCopy.includes("安全融合回答"));
+
+  const preMd = formatPreMarkdown(preReport);
+  const postMd = formatPostMarkdown(postReport);
+  check("pre markdown contains quality sections", preMd.includes("导师压力测试") && preMd.includes("回答安全校验"));
+  check("post markdown contains quality sections", postMd.includes("证据依据") && postMd.includes("安全融合回答"));
 
   console.log("\n=== Unit Tests: Prompt Builders ===\n");
 
@@ -161,7 +185,7 @@ export async function testAll() {
     interviewType: "夏令营", targetDirection: "AI",
     backgroundMaterials: "test", question: "q?", liveAnswer: "a", calmAnswer: "b",
     materialAnalysis: {
-      evidenceCards: [{ title: "test", type: "project", content: "c", supportedQuestions: [], abilities: [], possibleFollowUps: [], usageRisk: "", suggestedExpression: "" }],
+      evidenceCards: [{ id: "card_1", title: "test", type: "project", content: "c", supportedQuestions: [], abilities: [], possibleFollowUps: [], usageRisk: "", suggestedExpression: "" }],
       summary: "s", inputFingerprint: "fp", agentTrace: [],
     },
     questionPlan: {

@@ -7,15 +7,19 @@ function normalizeMaterialOutput(raw: unknown): MaterialAgentOutput {
   const obj = raw as Record<string, unknown>;
   const cards = ensureArray<Record<string, unknown>>(obj.evidenceCards);
   return {
-    evidenceCards: cards.map((c) => ({
+    evidenceCards: cards.map((c, index) => ({
+      id: ensureString(c.id, `card_${index + 1}`),
       title: ensureString(c.title, "未命名"),
-      type: (c.type as EvidenceCard["type"]) || "other",
+      type: (["project", "research", "course", "competition", "statement", "other"].includes(c.type as string)
+        ? c.type
+        : "other") as EvidenceCard["type"],
       content: ensureString(c.content),
       supportedQuestions: ensureArray<string>(c.supportedQuestions),
       abilities: ensureArray<string>(c.abilities),
       possibleFollowUps: ensureArray<string>(c.possibleFollowUps),
       usageRisk: ensureString(c.usageRisk),
       suggestedExpression: ensureString(c.suggestedExpression),
+      missingInfo: ensureArray<string>(c.missingInfo),
     })),
     summary: ensureString(obj.summary),
   };
@@ -38,14 +42,17 @@ ${ctx.targetSchool ? `目标院校：${ctx.targetSchool}` : ""}
 1. 抽取最多4张证据卡，每张卡描述一个具体的项目/科研/课程/竞赛经历
 2. 注意材料中的文件标签（如【个人简历】【个人陈述】【某某论文】），标签指明了材料类型和用途
 3. 不编造用户未提及的经历
-4. 每张卡要写清：材料名称、类型、关键内容、可证明的能力、适合支撑的问题类型、可能的追问点、使用风险、建议表达方式
-5. 如果材料很少，返回少于4张卡并在 summary 说明信息不足
-6. 仅输出JSON，不要其他文字
+4. 每张卡必须有稳定 id，格式为 card_1、card_2、card_3
+5. 每张卡要写清：材料名称、类型、关键内容、可证明的能力、适合支撑的问题类型、可能的追问点、使用风险、建议表达方式
+6. 如果某张卡缺少指标、个人贡献、评价方式等关键信息，请写入 missingInfo，不要自行猜测
+7. 如果材料很少，返回少于4张卡并在 summary 说明信息不足
+8. 仅输出JSON，不要其他文字
 
 输出JSON结构：
 {
   "evidenceCards": [
     {
+      "id": "card_1",
       "title": "项目名称",
       "type": "project | research | course | competition | statement | other",
       "content": "详细内容",
@@ -53,7 +60,8 @@ ${ctx.targetSchool ? `目标院校：${ctx.targetSchool}` : ""}
       "abilities": ["可证明的能力"],
       "possibleFollowUps": ["可能引发的追问"],
       "usageRisk": "使用时需要注意的风险",
-      "suggestedExpression": "建议如何表达这段材料"
+      "suggestedExpression": "建议如何表达这段材料",
+      "missingInfo": ["仍需要补充的信息"]
     }
   ],
   "summary": "一句话总结材料分析结果"
