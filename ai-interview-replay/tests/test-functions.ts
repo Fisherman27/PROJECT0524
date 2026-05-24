@@ -68,7 +68,7 @@ export async function testAll() {
     evidenceClaims: [{ title: "回答缺少项目证据", detail: "临场回答没有调用项目经历", evidenceRefs: [], missingInfo: [], confidence: "high" }],
     pressureTests: [{ riskyExpression: "模型优化", likelyQuestion: "你优化的是参数还是Prompt？", dangerReason: "容易夸大贡献", currentSupportLevel: "medium", safeResponse: "我主要做Prompt和流程优化", missingInfo: [], evidenceRefs: [] }],
     bestMergedAnswer: "融合后的最佳回答文本",
-    safeAnswer: { answer30s: "30秒安全回答", answer60s: "60秒安全回答", usedEvidence: [], riskControls: ["避免夸大"] },
+    safeAnswer: { answer: "安全回答，控制在150字以内，适合口语表达", usedEvidence: [], riskControls: ["避免夸大"] },
     answerVerification: { passed: true, summary: "通过校验", issues: [] },
     rescueTemplate: "下次可以这样说：我的兴趣来自___",
     nextPracticeAdvice: [{ title: "证据训练", detail: "练习用经历支撑观点" }],
@@ -82,7 +82,7 @@ export async function testAll() {
   check("rescueTemplate present", !!preReport.rescueTemplate);
   check("pre evidenceClaims present", preReport.evidenceClaims.length === 1);
   check("pre pressureTests present", preReport.pressureTests.length === 1);
-  check("pre safeAnswer present", !!preReport.safeAnswer.answer60s);
+  check("pre safeAnswer present", !!preReport.safeAnswer.answer);
   check("pre verification present", typeof preReport.answerVerification.passed === "boolean");
 
   try { normalizePreReport("bad json!!!"); check("normalizePreReport rejects invalid", false); }
@@ -98,7 +98,7 @@ export async function testAll() {
     evidenceClaims: [{ title: "版本B证据更充分", detail: "版本B提到项目经历", evidenceRefs: [], missingInfo: [], confidence: "medium" }],
     pressureTests: [{ riskyExpression: "深入研究", likelyQuestion: "读过哪些论文？", dangerReason: "材料不足", currentSupportLevel: "weak", safeResponse: "初步接触相关问题", missingInfo: [], evidenceRefs: [] }],
     bestMergedAnswer: "融合回答",
-    safeAnswer: { answer30s: "30秒", answer60s: "60秒", usedEvidence: [], riskControls: ["降低包装"] },
+    safeAnswer: { answer: "安全回答版本", usedEvidence: [], riskControls: ["降低包装"] },
     answerVerification: { passed: false, summary: "需要修改", issues: [] },
     transferableFormula: "1.经历→2.问题→3.方向",
     nextInterviewChecklist: ["准备1", "准备2"],
@@ -112,7 +112,7 @@ export async function testAll() {
   check("checklist has 2 items", postReport.nextInterviewChecklist.length === 2);
   check("post evidenceClaims present", postReport.evidenceClaims.length === 1);
   check("post pressureTests present", postReport.pressureTests.length === 1);
-  check("post safeAnswer present", !!postReport.safeAnswer.answer60s);
+  check("post safeAnswer present", !!postReport.safeAnswer.answer);
   check("post verification present", typeof postReport.answerVerification.passed === "boolean");
 
   console.log("\n=== Unit Tests: JSON Sanitizer ===\n");

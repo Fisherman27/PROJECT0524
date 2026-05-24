@@ -1,8 +1,8 @@
 import {
   PreReplayReport, PostReplayReport, AgentTraceItem,
   DiagnosisClaim, ProfessorPressureTest, SafeAnswerOutput,
-  AnswerVerification, AnswerMaturity, AnswerMaturityLevel,
-  QualitySummary, MissingInfoItem, RiskRadarItem, MaterialRecall,
+  AnswerVerification, AnswerMaturity,
+  QualitySummary, MissingInfoItem, MaterialRecall,
 } from "@/types/replay";
 import {
   MaterialAgentOutput,
